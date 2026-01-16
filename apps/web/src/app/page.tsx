@@ -14,9 +14,9 @@ export default function Home() {
         <nav className="ml-auto flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <Link href="#features" className="hover:text-foreground transition-colors">Features</Link>
           <Link href="#pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-          <Link href="/login" className="text-foreground hover:text-primary transition-colors">Log in</Link>
+          <Link href="/sign-in" className="text-foreground hover:text-primary transition-colors">Log in</Link>
           <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Link href="/signup">Start Free Trial</Link>
+            <Link href="/sign-up">Start Free Trial</Link>
           </Button>
         </nav>
       </header>
@@ -38,11 +38,11 @@ export default function Home() {
             Prove compliance with zero friction.
           </p>
           <div className="flex justify-center gap-4 pt-4">
-            <Button size="lg" className="h-12 px-8 text-base shadow-sm">
-              Generate Proof
+            <Button size="lg" className="h-12 px-8 text-base shadow-sm" asChild>
+              <Link href="/dashboard">Generate Proof</Link>
             </Button>
-            <Button size="lg" variant="outline" className="h-12 px-8 text-base">
-              View Sample Report
+            <Button size="lg" variant="outline" className="h-12 px-8 text-base" asChild>
+              <Link href="#features">View Sample Report</Link>
             </Button>
           </div>
         </section>
