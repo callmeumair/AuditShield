@@ -1,0 +1,15 @@
+{
+    "name": "auditshield-monorepo",
+    "version": "0.0.0",
+    "private": true,
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "build": "npm run build --workspace=apps/web",
+        "dev": "npm run dev --workspace=apps/web"
+    },
+    "devDependencies": {
+        "prettier": "^3.0.0"
+    }
+}
