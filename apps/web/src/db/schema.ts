@@ -35,3 +35,16 @@ export const reports = pgTable('reports', {
     reportHash: text('report_hash').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const policies = pgTable('policies', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+    domain: text('domain').notNull(), // e.g., 'openai.com'
+    status: text('status').default('allowed'), // 'allowed', 'banned', 'review'
+    reason: text('reason'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+    return {
+        policyOrgIdx: index('idx_policy_org').on(table.organizationId),
+    }
+});
