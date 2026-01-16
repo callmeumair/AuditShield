@@ -1,5 +1,7 @@
-import { LandingPage } from "@/components/landing/LandingPage";
+import { Navigation } from "@/components/shared/Navigation";
+import { Footer } from "@/components/shared/Footer";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return <LandingPage />;
+export default function RootPage() {
+  redirect("/home");
 }
