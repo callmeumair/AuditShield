@@ -19,16 +19,16 @@ const footerLinks = {
         { label: "Blog", href: "#" },
     ],
     resources: [
-        { label: "Documentation", href: "#" },
-        { label: "API Reference", href: "#" },
-        { label: "Support", href: "/contact" },
-        { label: "Status", href: "#" },
+        { label: "Documentation", href: "/documentation" },
+        { label: "API Reference", href: "/api-reference" },
+        { label: "Support", href: "/support" },
+        { label: "Status", href: "/status" },
     ],
     legal: [
-        { label: "Privacy Policy", href: "#" },
-        { label: "Terms of Service", href: "#" },
-        { label: "Cookie Policy", href: "#" },
-        { label: "Compliance", href: "/about#compliance" },
+        { label: "Privacy Policy", href: "/privacy" },
+        { label: "Terms of Service", href: "/terms" },
+        { label: "Cookie Policy", href: "/cookies" },
+        { label: "Compliance", href: "/compliance" },
     ],
 };
 
