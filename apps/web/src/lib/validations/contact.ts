@@ -36,9 +36,7 @@ export const contactFormSchema = z.object({
         "51-200",
         "201-1000",
         "1000+"
-    ], {
-        errorMap: () => ({ message: "Please select a company size" })
-    }),
+    ] as const),
 
     industry: z.string()
         .min(2, "Please specify your industry")
@@ -65,7 +63,7 @@ export const contactFormSchema = z.object({
         "support",
         "partnership",
         "other"
-    ]).default("demo"),
+    ] as const).default("demo"),
 
     subject: z.string()
         .min(5, "Subject must be at least 5 characters")
@@ -81,7 +79,7 @@ export const contactFormSchema = z.object({
         "email",
         "phone",
         "either"
-    ]).default("email"),
+    ] as const).default("email"),
 
     preferredTime: z.string()
         .max(100)
