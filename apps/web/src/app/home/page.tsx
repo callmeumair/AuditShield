@@ -1,7 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import CountUp from "react-countup";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "@/components/shared/Navigation";
 import { Footer } from "@/components/shared/Footer";
@@ -10,7 +13,7 @@ import { GradientBlob } from "@/components/shared/GradientBlob";
 import {
     ShieldCheck, Lock, Activity, Search, FileText,
     ArrowRight, CheckCircle2, Zap, Users, TrendingUp,
-    Globe, Terminal, Eye, Shield
+    Globe, Terminal, Eye, Shield, Play
 } from "lucide-react";
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/animations";
 
@@ -73,32 +76,53 @@ export default function HomePage() {
                     </Button>
                 </motion.div>
 
-                {/* Hero Visual */}
+                {/* Hero Visual - Enhanced with Animation */}
                 <motion.div
                     initial={{ opacity: 0, y: 40, rotateX: 10 }}
                     animate={{ opacity: 1, y: 0, rotateX: 0 }}
                     transition={{ duration: 1, delay: 0.5 }}
-                    className="w-full max-w-6xl rounded-2xl border border-border/50 bg-background/50 backdrop-blur-md shadow-2xl overflow-hidden aspect-[16/9] relative group"
+                    className="w-full max-w-6xl rounded-2xl border border-border/50 bg-background/50 backdrop-blur-md shadow-2xl overflow-hidden aspect-[16/9] relative group hover:border-primary/30 transition-all"
                 >
                     <div className="absolute inset-0 bg-gradient-to-tr from-background via-secondary/10 to-primary/5"></div>
                     <div className="absolute inset-x-0 top-0 h-12 border-b border-border/40 bg-secondary/20 flex items-center px-4 space-x-2">
                         <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
                         <div className="w-3 h-3 rounded-full bg-amber-400/80"></div>
                         <div className="w-3 h-3 rounded-full bg-green-400/80"></div>
+                        <div className="flex-1 text-center text-xs text-muted-foreground/60 font-mono">AuditShield Dashboard</div>
                     </div>
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-center space-y-4">
-                            <Terminal className="h-16 w-16 text-primary/40 mx-auto" />
-                            <p className="text-muted-foreground text-sm font-mono tracking-wider">
-                                [ Interactive Audit Dashboard Preview ]
-                            </p>
+                    <div className="flex items-center justify-center h-full pt-12">
+                        <div className="text-center space-y-6 relative">
+                            <motion.div
+                                animate={{
+                                    y: [0, -10, 0],
+                                    opacity: [0.4, 0.6, 0.4]
+                                }}
+                                transition={{
+                                    duration: 3,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
+                                }}
+                                className="relative"
+                            >
+                                <Terminal className="h-20 w-20 text-primary/40 mx-auto" />
+                                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full"></div>
+                            </motion.div>
+                            <div className="space-y-2">
+                                <p className="text-muted-foreground/90 text-sm font-mono tracking-wider">
+                                    [ Live Dashboard Preview ]
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                                    <Play className="h-3 w-3" />
+                                    <span>Click "Start Auditing Now" to explore</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </motion.div>
             </section>
 
-            {/* Stats Section */}
+            {/* Stats Section - Enhanced with Count-Up Animation */}
             <section className="py-16 border-y border-border/40 bg-secondary/20 backdrop-blur-sm">
                 <div className="max-w-7xl mx-auto px-6">
                     <motion.div
@@ -109,19 +133,36 @@ export default function HomePage() {
                         className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
                     >
                         {[
-                            { label: "AI Events Logged", value: "1.2M+", icon: Activity },
-                            { label: "Compliance Rate", value: "99.9%", icon: ShieldCheck },
-                            { label: "Audits Passed", value: "500+", icon: CheckCircle2 },
-                            { label: "Enterprise Teams", value: "50+", icon: Users },
-                        ].map((stat, i) => (
-                            <motion.div key={i} variants={staggerItem} className="space-y-2">
-                                <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
-                                <h3 className="text-4xl md:text-5xl font-bold text-foreground">{stat.value}</h3>
-                                <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                                    {stat.label}
-                                </p>
-                            </motion.div>
-                        ))}
+                            { label: "AI Events Logged", value: 1200000, suffix: "+", decimals: 0, icon: Activity },
+                            { label: "Compliance Rate", value: 99.9, suffix: "%", decimals: 1, icon: ShieldCheck },
+                            { label: "Audits Passed", value: 500, suffix: "+", decimals: 0, icon: CheckCircle2 },
+                            { label: "Enterprise Teams", value: 50, suffix: "+", decimals: 0, icon: Users },
+                        ].map((stat, i) => {
+                            const ref = useRef(null);
+                            const isInView = useInView(ref, { once: true });
+
+                            return (
+                                <motion.div key={i} ref={ref} variants={staggerItem} className="space-y-2">
+                                    <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
+                                    <h3 className="text-4xl md:text-5xl font-bold text-foreground">
+                                        {isInView ? (
+                                            <CountUp
+                                                end={stat.value}
+                                                duration={2.5}
+                                                decimals={stat.decimals}
+                                                suffix={stat.suffix}
+                                                separator=","
+                                            />
+                                        ) : (
+                                            "0" + stat.suffix
+                                        )}
+                                    </h3>
+                                    <p className="text-sm font-medium text-muted-foreground/90 uppercase tracking-widest">
+                                        {stat.label}
+                                    </p>
+                                </motion.div>
+                            );
+                        })}
                     </motion.div>
                 </div>
             </section>
@@ -150,19 +191,22 @@ export default function HomePage() {
                                 icon: Search,
                                 title: "Shadow AI Detection",
                                 desc: "Instantly identify unauthorized LLM usage across your network. Know exactly which tools are being used, when, and by whom.",
-                                gradient: "from-blue-500/10 to-cyan-500/10"
+                                gradient: "from-blue-500/10 to-cyan-500/10",
+                                image: "/brain/0b9f334d-7a2f-475d-b9a8-30ce49e785a5/shadow_ai_detection_1768657281690.png"
                             },
                             {
                                 icon: Lock,
                                 title: "Data Leak Prevention",
                                 desc: "Block or flag requests when sensitive data patterns (PII, API Keys, credentials) are detected in prompts before they leave.",
-                                gradient: "from-purple-500/10 to-pink-500/10"
+                                gradient: "from-purple-500/10 to-pink-500/10",
+                                image: null
                             },
                             {
                                 icon: FileText,
                                 title: "Audit-Ready Logs",
                                 desc: "Generate SHA-256 hashed, tamper-evident PDF reports that stand up to scrutiny from auditors and legal teams.",
-                                gradient: "from-amber-500/10 to-orange-500/10"
+                                gradient: "from-amber-500/10 to-orange-500/10",
+                                image: null
                             }
                         ].map((feature, i) => (
                             <motion.div
@@ -172,14 +216,27 @@ export default function HomePage() {
                                 className="group p-8 rounded-2xl border border-border bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:border-primary/30 transition-all relative overflow-hidden"
                             >
                                 <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                                <div className="relative z-10">
+                                <div className="relative z-10 space-y-6">
                                     <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-110 transition-all">
                                         <feature.icon className="h-7 w-7" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        {feature.desc}
-                                    </p>
+                                    <div>
+                                        <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
+                                        <p className="text-muted-foreground/90 leading-relaxed">
+                                            {feature.desc}
+                                        </p>
+                                    </div>
+                                    {feature.image && (
+                                        <div className="mt-6 rounded-lg overflow-hidden border border-border/50 bg-background/30">
+                                            <Image
+                                                src={feature.image}
+                                                alt={feature.title}
+                                                width={400}
+                                                height={250}
+                                                className="w-full h-auto object-cover"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         ))}
@@ -275,19 +332,22 @@ export default function HomePage() {
                                 quote: "AuditShield gave us the visibility we desperately needed. We went from zero AI governance to full compliance in weeks.",
                                 author: "Sarah Chen",
                                 role: "CISO, TechCorp",
-                                rating: 5
+                                rating: 5,
+                                avatar: "/brain/0b9f334d-7a2f-475d-b9a8-30ce49e785a5/testimonial_avatar_sarah_1768657308339.png"
                             },
                             {
                                 quote: "The audit reports are exactly what our legal team needed. SHA-256 hashing gives us the proof we can defend in court.",
                                 author: "Michael Rodriguez",
                                 role: "General Counsel, FinanceHub",
-                                rating: 5
+                                rating: 5,
+                                avatar: null
                             },
                             {
                                 quote: "Finally, a solution that doesn't slow down our developers while keeping us compliant. It's invisible until you need it.",
                                 author: "Emily Watson",
                                 role: "VP Engineering, DataFlow",
-                                rating: 5
+                                rating: 5,
+                                avatar: null
                             }
                         ].map((testimonial, i) => (
                             <motion.div
@@ -302,15 +362,50 @@ export default function HomePage() {
                                         </svg>
                                     ))}
                                 </div>
-                                <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
-                                <div>
-                                    <p className="font-semibold">{testimonial.author}</p>
-                                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                                <p className="text-muted-foreground/90 mb-6 italic leading-relaxed">"{testimonial.quote}"</p>
+                                <div className="flex items-center gap-4">
+                                    {testimonial.avatar ? (
+                                        <Image
+                                            src={testimonial.avatar}
+                                            alt={testimonial.author}
+                                            width={48}
+                                            height={48}
+                                            className="rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                                            {testimonial.author.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="font-semibold">{testimonial.author}</p>
+                                        <p className="text-sm text-muted-foreground/90">{testimonial.role}</p>
+                                    </div>
                                 </div>
                             </motion.div>
                         ))}
                     </motion.div>
                 </div>
+
+                {/* Integration Logos - Trust Bar */}
+                <AnimatedSection className="mt-20">
+                    <div className="text-center mb-8">
+                        <p className="text-sm font-medium text-muted-foreground/90 uppercase tracking-widest mb-6">
+                            Integrates Seamlessly With
+                        </p>
+                    </div>
+                    <div className="flex justify-center">
+                        <div className="relative w-full max-w-2xl">
+                            <Image
+                                src="/brain/0b9f334d-7a2f-475d-b9a8-30ce49e785a5/integration_logos_1768657324232.png"
+                                alt="AI Tool Integrations: ChatGPT, Claude, Gemini, Copilot"
+                                width={600}
+                                height={150}
+                                className="w-full h-auto opacity-80 hover:opacity-100 transition-opacity"
+                            />
+                        </div>
+                    </div>
+                </AnimatedSection>
             </section>
 
             {/* Final CTA */}
