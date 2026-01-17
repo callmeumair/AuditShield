@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,34 +10,78 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion } from "framer-motion";
 
 // Mock Data for Chart
-const data = [
-    { time: '09:00', requests: 45, violations: 2 },
-    { time: '10:00', requests: 120, violations: 5 },
-    { time: '11:00', requests: 340, violations: 12 },
-    { time: '12:00', requests: 280, violations: 4 },
-    { time: '13:00', requests: 590, violations: 8 },
-    { time: '14:00', requests: 450, violations: 6 },
-    { time: '15:00', requests: 380, violations: 3 },
-];
+// const data = [ ... ]; // Logic replaced by fetch
 
-const recentEvents = [
-    { id: "evt_1", time: "14:32:01", domain: "chat.openai.com", user: "alice@auditshield.ai", status: "allowed", hash: "e3b0c442...855" },
-    { id: "evt_2", time: "14:31:55", domain: "claude.ai", user: "bob@auditshield.ai", status: "allowed", hash: "8d969eef...b21" },
-    { id: "evt_3", time: "14:30:12", domain: "unknown-ai.com", user: "dave@auditshield.ai", status: "flagged", hash: "1253e93a...c99" },
-    { id: "evt_4", time: "14:28:44", domain: "gemini.google.com", user: "eve@auditshield.ai", status: "allowed", hash: "a8f5f167...901" },
-    { id: "evt_5", time: "14:25:30", domain: "midjourney.com", user: "frank@auditshield.ai", status: "flagged", hash: "c4ca4238...a21" },
-];
+interface DashboardStats {
+    interactions: number;
+    policies: number;
+    violations: number;
+    egress: string;
+}
+
+interface ChartPoint {
+    time: string;
+    requests: number;
+}
+
+interface ActivityEvent {
+    id: string;
+    domain: string;
+    user: string;
+    time: string;
+    status: 'allowed' | 'flagged';
+    hash: string;
+}
 
 export function OverviewClient() {
+    const [stats, setStats] = useState<DashboardStats>({
+        interactions: 0,
+        policies: 0,
+        violations: 0,
+        egress: "0GB"
+    });
+    const [chartData, setChartData] = useState<ChartPoint[]>([]);
+    const [activity, setActivity] = useState<ActivityEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [statsRes, chartRes, activityRes] = await Promise.all([
+                    fetch('/api/dashboard/stats'),
+                    fetch('/api/dashboard/chart'),
+                    fetch('/api/dashboard/activity')
+                ]);
+
+                if (statsRes.ok) setStats(await statsRes.json());
+                if (chartRes.ok) setChartData(await chartRes.json());
+                if (activityRes.ok) setActivity(await activityRes.json());
+            } catch (error) {
+                console.error("Failed to fetch dashboard data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (loading) {
+        return <div className="p-8 text-center text-muted-foreground">Loading dashboard...</div>;
+    }
+
     return (
         <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {[
-                    { title: "Total AI Interactions", value: "2,543", change: "+12.5%", icon: Activity, color: "text-primary" },
-                    { title: "Active Policies", value: "14", change: "Enforcing", icon: ShieldCheck, color: "text-emerald-500" },
-                    { title: "Risk Violations", value: "23", change: "-2.4%", icon: AlertTriangle, color: "text-amber-500" },
-                    { title: "Data Egress Blocked", value: "1.2GB", change: "+4%", icon: Lock, color: "text-rose-500" },
+                    { title: "Total AI Interactions", value: stats.interactions, change: "Live", icon: Activity, color: "text-primary" },
+                    { title: "Active Policies", value: stats.policies, change: "Enforcing", icon: ShieldCheck, color: "text-emerald-500" },
+                    { title: "Risk Violations", value: stats.violations, change: "Requires Attention", icon: AlertTriangle, color: "text-amber-500" },
+                    { title: "Data Egress Blocked", value: stats.egress, change: "Protected", icon: Lock, color: "text-rose-500" },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
@@ -51,10 +97,7 @@ export function OverviewClient() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{stat.value}</div>
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                    {stat.change.includes('+') || stat.change.includes('Enforcing') ?
-                                        <span className="text-emerald-500 flex items-center mr-1"><ArrowUpRight className="h-3 w-3 mr-0.5" /> {stat.change}</span>
-                                        : <span className="text-muted-foreground mr-1">{stat.change}</span>}
-                                    {stat.change.includes('%') && "from last week"}
+                                    <span className="text-muted-foreground mr-1">{stat.change}</span>
                                 </p>
                             </CardContent>
                         </Card>
@@ -73,12 +116,12 @@ export function OverviewClient() {
                     <Card className="h-full border-border/60">
                         <CardHeader>
                             <CardTitle>AI Request Volume</CardTitle>
-                            <CardDescription>Real-time traffic analysis across all endpoints.</CardDescription>
+                            <CardDescription>Real-time traffic analysis (Last 24 Hours).</CardDescription>
                         </CardHeader>
                         <CardContent className="pl-0">
                             <div className="h-[300px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
@@ -117,25 +160,29 @@ export function OverviewClient() {
                         </CardHeader>
                         <CardContent className="flex-1 overflow-hidden">
                             <div className="space-y-4">
-                                {recentEvents.map((event, i) => (
-                                    <div key={i} className="flex items-center justify-between text-sm p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-full ${event.status === 'allowed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                <Globe className="h-4 w-4" />
+                                {activity.length === 0 ? (
+                                    <div className="text-center text-sm text-muted-foreground py-8">No activity recorded yet.</div>
+                                ) : (
+                                    activity.map((event, i) => (
+                                        <div key={i} className="flex items-center justify-between text-sm p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full ${event.status === 'allowed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                    <Globe className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium">{event.domain}</div>
+                                                    <div className="text-xs text-muted-foreground">{event.user}</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="font-medium">{event.domain}</div>
-                                                <div className="text-xs text-muted-foreground">{event.user}</div>
+                                            <div className="text-right">
+                                                <div className="font-mono text-xs text-muted-foreground mb-1">{event.time}</div>
+                                                <Badge variant={event.status === 'allowed' ? 'outline' : 'destructive'} className="text-[10px] h-5">
+                                                    {event.status}
+                                                </Badge>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="font-mono text-xs text-muted-foreground mb-1">{event.time}</div>
-                                            <Badge variant={event.status === 'allowed' ? 'outline' : 'destructive'} className="text-[10px] h-5">
-                                                {event.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </CardContent>
                     </Card>

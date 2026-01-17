@@ -20,8 +20,14 @@ export async function POST(req: Request) {
         const firstOrg = await db.select().from(organizations).limit(1);
 
         if (firstOrg.length === 0) {
-            // Fallback if no org exists yet (handling empty state)
-            return NextResponse.json({ error: 'No organization configured to log against' }, { status: 404 });
+            // Auto-create default organization for smooth onboarding
+            const [newOrg] = await db.insert(organizations).values({
+                name: 'My Organization',
+                slug: 'my-org',
+                plan: 'active'
+            }).returning();
+
+            firstOrg.push(newOrg);
         }
 
         const organizationId = firstOrg[0].id;
