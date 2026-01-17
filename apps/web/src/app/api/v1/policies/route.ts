@@ -4,10 +4,11 @@ import { db } from '@/lib/db';
 import { policies, organizations } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { validateApiKey, extractApiKey } from '@/lib/auth/validateApiKey';
+import { cache, CACHE_KEYS, CACHE_TTL } from '@/lib/cache';
 
 /**
  * GET /api/v1/policies
- * Fetch policies for organization
+ * Fetch policies for organization (with Redis caching)
  * Can be called by extension (with API key) or dashboard (with Clerk auth)
  */
 export async function GET(request: Request) {
@@ -61,13 +62,22 @@ export async function GET(request: Request) {
             );
         }
 
-        // Fetch all policies for the organization
-        const allPolicies = await db
-            .select()
-            .from(policies)
-            .where(eq(policies.organizationId, organizationId))
-            .orderBy(policies.createdAt);
+        // Try to get from cache first
+        const cacheKey = CACHE_KEYS.policies(organizationId);
+        const allPolicies = await cache.getOrSet(
+            cacheKey,
+            CACHE_TTL.policies,
+            async () => {
+                console.log('[Cache MISS] Policies for org:', organizationId);
+                return await db
+                    .select()
+                    .from(policies)
+                    .where(eq(policies.organizationId, organizationId!))
+                    .orderBy(policies.createdAt);
+            }
+        );
 
+        console.log('[Cache] Policies returned:', allPolicies.length);
         return NextResponse.json({ policies: allPolicies });
     } catch (error) {
         console.error('GET /api/v1/policies error:', error);
@@ -138,6 +148,9 @@ export async function POST(request: Request) {
                 enabled: enabled !== undefined ? String(enabled) : 'true',
             })
             .returning();
+
+        // Invalidate cache
+        await cache.del(CACHE_KEYS.policies(org.id));
 
         return NextResponse.json({ policy: newPolicy });
     } catch (error) {
@@ -214,6 +227,9 @@ export async function PUT(request: Request) {
             );
         }
 
+        // Invalidate cache
+        await cache.del(CACHE_KEYS.policies(org.id));
+
         return NextResponse.json({ policy: updatedPolicy });
     } catch (error) {
         console.error('PUT /api/v1/policies error:', error);
@@ -272,6 +288,9 @@ export async function DELETE(request: Request) {
                     eq(policies.organizationId, org.id)
                 )
             );
+
+        // Invalidate cache
+        await cache.del(CACHE_KEYS.policies(org.id));
 
         return NextResponse.json({ success: true });
     } catch (error) {
