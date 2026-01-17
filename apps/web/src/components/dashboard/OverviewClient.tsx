@@ -1,76 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShieldCheck, AlertTriangle, Activity, ArrowUpRight, Lock, Globe, Terminal } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Activity, Lock, Globe, Terminal } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from "framer-motion";
-
-// Mock Data for Chart
-// const data = [ ... ]; // Logic replaced by fetch
-
-interface DashboardStats {
-    interactions: number;
-    policies: number;
-    violations: number;
-    egress: string;
-}
-
-interface ChartPoint {
-    time: string;
-    requests: number;
-}
-
-interface ActivityEvent {
-    id: string;
-    domain: string;
-    user: string;
-    time: string;
-    status: 'allowed' | 'flagged';
-    hash: string;
-}
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 export function OverviewClient() {
-    const [stats, setStats] = useState<DashboardStats>({
-        interactions: 0,
-        policies: 0,
-        violations: 0,
-        egress: "0GB"
-    });
-    const [chartData, setChartData] = useState<ChartPoint[]>([]);
-    const [activity, setActivity] = useState<ActivityEvent[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [statsRes, chartRes, activityRes] = await Promise.all([
-                    fetch('/api/dashboard/stats'),
-                    fetch('/api/dashboard/chart'),
-                    fetch('/api/dashboard/activity')
-                ]);
-
-                if (statsRes.ok) setStats(await statsRes.json());
-                if (chartRes.ok) setChartData(await chartRes.json());
-                if (activityRes.ok) setActivity(await activityRes.json());
-            } catch (error) {
-                console.error("Failed to fetch dashboard data", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
-    }, []);
+    const { stats, chartData, activity, loading, error } = useDashboardData();
 
     if (loading) {
         return <div className="p-8 text-center text-muted-foreground">Loading dashboard...</div>;
+    }
+
+    if (error) {
+        return <div className="p-8 text-center text-destructive">{error}</div>;
     }
 
     return (
@@ -78,10 +24,34 @@ export function OverviewClient() {
             {/* Stats Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {[
-                    { title: "Total AI Interactions", value: stats.interactions, change: "Live", icon: Activity, color: "text-primary" },
-                    { title: "Active Policies", value: stats.policies, change: "Enforcing", icon: ShieldCheck, color: "text-emerald-500" },
-                    { title: "Risk Violations", value: stats.violations, change: "Requires Attention", icon: AlertTriangle, color: "text-amber-500" },
-                    { title: "Data Egress Blocked", value: stats.egress, change: "Protected", icon: Lock, color: "text-rose-500" },
+                    {
+                        title: "Total AI Interactions",
+                        value: stats.interactions.toLocaleString(),
+                        trend: stats.trends?.interactions || 0,
+                        icon: Activity,
+                        color: "text-primary"
+                    },
+                    {
+                        title: "Active Policies",
+                        value: stats.policies,
+                        trend: stats.trends?.policies || 0,
+                        icon: ShieldCheck,
+                        color: "text-emerald-500"
+                    },
+                    {
+                        title: "Risk Violations",
+                        value: stats.violations,
+                        trend: stats.trends?.violations || 0,
+                        icon: AlertTriangle,
+                        color: "text-amber-500"
+                    },
+                    {
+                        title: "Data Egress Blocked",
+                        value: stats.egress,
+                        trend: 0,
+                        icon: Lock,
+                        color: "text-rose-500"
+                    },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
@@ -89,16 +59,29 @@ export function OverviewClient() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow border-border/60">
+                        <Card className="hover:shadow-lg hover:border-primary/30 transition-all duration-300 border-border/60 group">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                                <stat.icon className={`h-4 w-4 ${stat.color} group-hover:scale-110 transition-transform`} />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{stat.value}</div>
-                                <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                    <span className="text-muted-foreground mr-1">{stat.change}</span>
-                                </p>
+                                {stat.trend !== 0 && (
+                                    <p className="text-xs mt-1 flex items-center gap-1">
+                                        {stat.trend > 0 ? (
+                                            <>
+                                                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                                <span className="text-emerald-500 font-medium">+{stat.trend}%</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TrendingDown className="h-3 w-3 text-rose-500" />
+                                                <span className="text-rose-500 font-medium">{stat.trend}%</span>
+                                            </>
+                                        )}
+                                        <span className="text-muted-foreground">from last week</span>
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
                     </motion.div>

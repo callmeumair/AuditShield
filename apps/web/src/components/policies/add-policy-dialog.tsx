@@ -27,13 +27,22 @@ import { toast } from 'sonner'; // Assuming sonner is installed, or we'll simple
 
 export function AddPolicyDialog() {
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     async function clientAction(formData: FormData) {
-        const result = await addPolicy(formData);
-        if (result?.error) {
-            alert(result.error);
-        } else {
-            setOpen(false);
+        setLoading(true);
+        try {
+            const result = await addPolicy(formData);
+            if (result?.error) {
+                toast.error(result.error);
+            } else {
+                toast.success('Policy added successfully');
+                setOpen(false);
+            }
+        } catch (error) {
+            toast.error('Failed to add policy');
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -81,7 +90,9 @@ export function AddPolicyDialog() {
                         <Textarea id="reason" name="reason" placeholder="Why is this rule defined?" className="col-span-3" />
                     </div>
                     <DialogFooter>
-                        <Button type="submit">Save Policy</Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Policy'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
