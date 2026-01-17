@@ -186,4 +186,30 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /* macOS-style premium hand pointer cursor for all interactive elements */
+  button,
+  a,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  select,
+  .cursor-pointer {
+    cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8.5 3.5C8.5 2.67157 9.17157 2 10 2C10.8284 2 11.5 2.67157 11.5 3.5V11.5H13.5C14.3284 11.5 15 12.1716 15 13C15 13.8284 14.3284 14.5 13.5 14.5H11.5V16.5C11.5 17.3284 10.8284 18 10 18C9.17157 18 8.5 17.3284 8.5 16.5V14.5H6.5C5.67157 14.5 5 13.8284 5 13C5 12.1716 5.67157 11.5 6.5 11.5H8.5V3.5Z' fill='%23000000' stroke='%23FFFFFF' stroke-width='0.5'/%3E%3C/svg%3E") 12 12, pointer !important;
+  }
+
+  /* Enhanced hover state for buttons */
+  button:hover,
+  a:hover,
+  [role="button"]:hover {
+    cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8.5 3.5C8.5 2.67157 9.17157 2 10 2C10.8284 2 11.5 2.67157 11.5 3.5V11.5H13.5C14.3284 11.5 15 12.1716 15 13C15 13.8284 14.3284 14.5 13.5 14.5H11.5V16.5C11.5 17.3284 10.8284 18 10 18C9.17157 18 8.5 17.3284 8.5 16.5V14.5H6.5C5.67157 14.5 5 13.8284 5 13C5 12.1716 5.67157 11.5 6.5 11.5H8.5V3.5Z' fill='%234F46E5' stroke='%23FFFFFF' stroke-width='0.5'/%3E%3C/svg%3E") 12 12, pointer !important;
+  }
+
+  /* Disabled state - use default cursor */
+  button:disabled,
+  a[aria-disabled="true"],
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed !important;
+  }
 }
