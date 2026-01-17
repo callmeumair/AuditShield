@@ -6,6 +6,7 @@ function Popup() {
     const [tab, setTab] = useState<'activity' | 'settings'>('activity');
     const [apiKey, setApiKey] = useState('');
     const [apiUrl, setApiUrl] = useState('http://localhost:3000');
+    const [userEmail, setUserEmail] = useState('');
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -18,9 +19,10 @@ function Popup() {
             });
 
             // Load settings
-            chrome.storage.sync.get(['apiKey', 'apiUrl'], (res) => {
+            chrome.storage.sync.get(['apiKey', 'apiUrl', 'userEmail'], (res) => {
                 if (res.apiKey) setApiKey(res.apiKey);
                 if (res.apiUrl) setApiUrl(res.apiUrl);
+                if (res.userEmail) setUserEmail(res.userEmail);
             });
         } else {
             // Fallback for non-extension environment
@@ -34,7 +36,7 @@ function Popup() {
 
     const saveSettings = () => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.sync.set({ apiKey, apiUrl }, () => {
+            chrome.storage.sync.set({ apiKey, apiUrl, userEmail }, () => {
                 setSaved(true);
                 setTimeout(() => setSaved(false), 2000);
             });
@@ -175,6 +177,29 @@ function Popup() {
                             />
                             <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
                                 Use http://localhost:3000 for local development
+                            </p>
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>
+                                Your Email (Optional)
+                            </label>
+                            <input
+                                type="email"
+                                value={userEmail}
+                                onChange={(e) => setUserEmail(e.target.value)}
+                                placeholder="your.email@company.com"
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                                Used to track your activity in audit logs
                             </p>
                         </div>
 

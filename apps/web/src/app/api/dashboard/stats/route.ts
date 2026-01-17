@@ -1,27 +1,29 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { auditEvents, policies } from '@/db/schema';
-import { count, eq, sql } from 'drizzle-orm';
+import { auditLogs, policies } from '@/db/schema';
+import { count, eq, sql, or } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        // Fetch total interactions (audit events)
-        const [interactions] = await db.select({ value: count() }).from(auditEvents);
+        // Fetch total interactions from audit_logs
+        const [interactions] = await db.select({ value: count() }).from(auditLogs);
 
         // Fetch active policies (enabled = 'true')
         const [activePolicies] = await db.select({ value: count() }).from(policies).where(eq(policies.enabled, 'true'));
 
-        // Mocking "Risk Violations" for now as we don't have a direct "violation" flag in events yet
-        // In a real app, this would be a join between events and denied policies
-        const violations = 0;
+        // Fetch violations (flagged or blocked events)
+        const [violationsCount] = await db
+            .select({ value: count() })
+            .from(auditLogs)
+            .where(or(eq(auditLogs.actionTaken, 'flagged'), eq(auditLogs.actionTaken, 'blocked')));
 
-        // Mocking "Data Egress" (randomized for demo/MVP as we don't capture packet size yet)
+        // Mocking "Data Egress" for now (would need actual data capture)
         const egress = "1.2GB";
 
         return NextResponse.json({
             interactions: interactions.value,
             policies: activePolicies.value,
-            violations: violations,
+            violations: violationsCount.value,
             egress: egress
         });
     } catch (error) {
