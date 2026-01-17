@@ -32,7 +32,7 @@ export async function addPolicy(formData: FormData) {
             reason
         });
 
-        revalidatePath('/policies');
+        revalidatePath('/dashboard/policies');
         return { success: true };
     } catch (error) {
         console.error('Failed to add policy:', error);
@@ -46,7 +46,7 @@ export async function deletePolicy(policyId: string) {
 
     try {
         await db.delete(policies).where(eq(policies.id, policyId));
-        revalidatePath('/policies');
+        revalidatePath('/dashboard/policies');
         return { success: true };
     } catch (error) {
         return { error: 'Failed to delete policy' };

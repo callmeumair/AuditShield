@@ -1,42 +1,67 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auditEvents } from '@/db/schema';
-import { sql } from 'drizzle-orm';
+import { sql, gte } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        // Aggregate events by hour for the chart
-        // Note: 'date_trunc' is Postgres specific
-        const chartData = await db.execute(sql`
-            SELECT 
-                to_char(created_at, 'HH24:00') as time,
-                COUNT(*) as requests
-            FROM ${auditEvents}
-            WHERE created_at > NOW() - INTERVAL '24 hours'
-            GROUP BY 1
-            ORDER BY 1 ASC
-        `) as unknown as any[];
+        // Get events from last 24 hours
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
 
-        // If no data, return empty array mock structure or the empty result
-        // We'll map it to the format Recharts expects
-        const formattedData = chartData.map(row => ({
-            time: row.time,
-            requests: Number(row.requests),
-            violations: 0 // Mocking violations for chart
-        }));
+        const events = await db
+            .select({
+                createdAt: auditEvents.createdAt,
+            })
+            .from(auditEvents)
+            .where(gte(auditEvents.createdAt, oneDayAgo));
 
-        // If completely empty (fresh DB), provide some logical empty set or let frontend handle it
-        if (formattedData.length === 0) {
-            return NextResponse.json([
-                { time: '09:00', requests: 0, violations: 0 },
-                { time: '12:00', requests: 0, violations: 0 },
-                { time: '15:00', requests: 0, violations: 0 },
-            ]);
+        // If no data, return mock structure for empty state
+        if (events.length === 0) {
+            const now = new Date();
+            const mockData = [];
+            for (let i = 23; i >= 0; i--) {
+                const hour = new Date(now);
+                hour.setHours(now.getHours() - i);
+                mockData.push({
+                    time: hour.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                    requests: 0,
+                });
+            }
+            return NextResponse.json(mockData);
         }
+
+        // Group by hour
+        const hourlyData = new Map<string, number>();
+
+        events.forEach(event => {
+            if (event.createdAt) {
+                const hour = new Date(event.createdAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                hourlyData.set(hour, (hourlyData.get(hour) || 0) + 1);
+            }
+        });
+
+        // Convert to array format for Recharts
+        const formattedData = Array.from(hourlyData.entries())
+            .map(([time, requests]) => ({
+                time,
+                requests,
+            }))
+            .sort((a, b) => a.time.localeCompare(b.time));
 
         return NextResponse.json(formattedData);
     } catch (error) {
         console.error('Chart API Error:', error);
-        return NextResponse.json({ error: 'Failed to fetch chart data' }, { status: 500 });
+        // Return empty data instead of error to prevent UI breaking
+        return NextResponse.json([
+            { time: '00:00', requests: 0 },
+            { time: '06:00', requests: 0 },
+            { time: '12:00', requests: 0 },
+            { time: '18:00', requests: 0 },
+        ]);
     }
 }
