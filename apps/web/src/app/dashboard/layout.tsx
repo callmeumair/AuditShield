@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { MacOSControls } from "@/components/ui/MacOSControls";
 
 export default function DashboardLayout({
     children,
@@ -9,6 +10,7 @@ export default function DashboardLayout({
 }) {
     return (
         <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/20">
+            <MacOSControls />
             <Sidebar />
 
             <main className="flex-1 ml-64 min-h-screen flex flex-col">
