@@ -38,8 +38,20 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
         resolver: zodResolver(contactFormSchema),
         mode: "onBlur",
         defaultValues: {
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            companyName: "",
+            companySize: undefined,
+            industry: "",
+            website: "",
+            jobTitle: "",
             inquiryType: "demo",
+            subject: "",
+            message: "",
             preferredContactMethod: "email",
+            preferredTime: "",
         },
     });
 
