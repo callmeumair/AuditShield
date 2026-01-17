@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Menu, X } from "lucide-react";
+import { ShieldCheck, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth, UserButton } from "@clerk/nextjs";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -19,6 +20,7 @@ const navLinks = [
 export function Navigation() {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const { isSignedIn } = useAuth();
 
     return (
         <motion.header
@@ -60,12 +62,23 @@ export function Navigation() {
 
                 {/* CTA Buttons */}
                 <div className="hidden lg:flex items-center gap-4">
-                    <Link href="/sign-in" className="text-sm font-medium hover:text-primary transition-colors">
-                        Log in
-                    </Link>
-                    <Button asChild size="default" className="rounded-full px-6 shadow-primary/25 shadow-lg hover:shadow-primary/40 transition-all">
-                        <Link href="/sign-up">Get Started</Link>
-                    </Button>
+                    {isSignedIn ? (
+                        <>
+                            <Button asChild size="default" variant="outline" className="rounded-full px-6">
+                                <Link href="/dashboard">Dashboard</Link>
+                            </Button>
+                            <UserButton afterSignOutUrl="/" />
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/sign-in" className="text-sm font-medium hover:text-primary transition-colors">
+                                Log in
+                            </Link>
+                            <Button asChild size="default" className="rounded-full px-6 shadow-primary/25 shadow-lg hover:shadow-primary/40 transition-all">
+                                <Link href="/sign-up">Get Started</Link>
+                            </Button>
+                        </>
+                    )}
                 </div>
 
                 {/* Mobile Menu Button */}
@@ -98,12 +111,25 @@ export function Navigation() {
                             </Link>
                         ))}
                         <div className="pt-4 space-y-3 border-t border-border/40">
-                            <Link href="/sign-in" className="block text-center text-sm font-medium hover:text-primary transition-colors">
-                                Log in
-                            </Link>
-                            <Button asChild size="default" className="w-full rounded-full">
-                                <Link href="/sign-up">Get Started</Link>
-                            </Button>
+                            {isSignedIn ? (
+                                <>
+                                    <Button asChild size="default" className="w-full rounded-full">
+                                        <Link href="/dashboard">Dashboard</Link>
+                                    </Button>
+                                    <div className="flex justify-center pt-2">
+                                        <UserButton afterSignOutUrl="/" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href="/sign-in" className="block text-center text-sm font-medium hover:text-primary transition-colors">
+                                        Log in
+                                    </Link>
+                                    <Button asChild size="default" className="w-full rounded-full">
+                                        <Link href="/sign-up">Get Started</Link>
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </nav>
                 </motion.div>
