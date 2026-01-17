@@ -53,6 +53,14 @@ export async function GET(request: Request) {
             organizationId = org.id;
         }
 
+        // Type guard - should never happen due to logic above
+        if (!organizationId) {
+            return NextResponse.json(
+                { error: 'Organization ID not found' },
+                { status: 500 }
+            );
+        }
+
         // Fetch all policies for the organization
         const allPolicies = await db
             .select()
