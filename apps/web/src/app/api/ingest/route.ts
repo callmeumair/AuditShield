@@ -24,7 +24,8 @@ export async function POST(req: Request) {
             const [newOrg] = await db.insert(organizations).values({
                 name: 'My Organization',
                 slug: 'my-org',
-                plan: 'active'
+                plan: 'active',
+                clerkOrgId: 'default-org' // Temporary default for legacy extension calls
             }).returning();
 
             firstOrg.push(newOrg);
