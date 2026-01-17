@@ -23,7 +23,9 @@ export default function DashboardLayout({
                                 Extension
                             </Button>
                         </a>
-                        <Button size="sm" className="h-8 shadow-md shadow-primary/20">Documentation</Button>
+                        <a href="/documentation">
+                            <Button size="sm" className="h-8 shadow-md shadow-primary/20">Documentation</Button>
+                        </a>
                     </div>
                 </header>
                 <div className="flex-1 p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-fade-in">
