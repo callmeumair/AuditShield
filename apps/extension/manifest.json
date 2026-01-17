@@ -6,14 +6,18 @@
     "permissions": [
         "activeTab",
         "storage",
-        "webNavigation"
+        "webNavigation",
+        "notifications"
     ],
     "host_permissions": [
         "*://chat.openai.com/*",
         "*://*.chatgpt.com/*",
         "*://chatgpt.com/*",
         "*://claude.ai/*",
-        "*://gemini.google.com/*"
+        "*://gemini.google.com/*",
+        "*://copilot.microsoft.com/*",
+        "*://perplexity.ai/*",
+        "*://poe.com/*"
     ],
     "action": {
         "default_popup": "index.html"
@@ -22,6 +26,24 @@
         "service_worker": "src/background.ts",
         "type": "module"
     },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://chat.openai.com/*",
+                "*://*.chatgpt.com/*",
+                "*://chatgpt.com/*",
+                "*://claude.ai/*",
+                "*://gemini.google.com/*",
+                "*://copilot.microsoft.com/*",
+                "*://perplexity.ai/*",
+                "*://poe.com/*"
+            ],
+            "js": [
+                "src/content.ts"
+            ],
+            "run_at": "document_end"
+        }
+    ],
     "icons": {
         "16": "icon16.png",
         "48": "icon48.png",

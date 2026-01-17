@@ -1,23 +1,88 @@
-// Background Service Worker
+// Background Service Worker with API Key Support
 
-// Trusted domains to monitor
+// Comprehensive AI domains to monitor
 const AI_DOMAINS = [
-    'chat.openai.com',
-    'chatgpt.com', // Added support for new domain
-    'claude.ai',
-    'gemini.google.com',
-    'copilot.microsoft.com'
+    { domain: 'chat.openai.com', tool: 'ChatGPT' },
+    { domain: 'chatgpt.com', tool: 'ChatGPT' },
+    { domain: 'claude.ai', tool: 'Claude' },
+    { domain: 'gemini.google.com', tool: 'Gemini' },
+    { domain: 'copilot.microsoft.com', tool: 'Copilot' },
+    { domain: 'perplexity.ai', tool: 'Perplexity' },
+    { domain: 'poe.com', tool: 'Poe' },
 ];
+
+// Get API configuration from storage
+async function getApiConfig(): Promise<{ apiKey: string; apiUrl: string; userEmail: string }> {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['apiKey', 'apiUrl', 'userEmail'], (result) => {
+            resolve({
+                apiKey: result.apiKey || '',
+                apiUrl: result.apiUrl || 'http://localhost:3000',
+                userEmail: result.userEmail || ''
+            });
+        });
+    });
+}
+
+async function sendEventToAPI(event: any) {
+    const config = await getApiConfig();
+
+    if (!config.apiKey) {
+        console.warn('[AuditShield] No API key configured. Please set up in extension settings.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${config.apiUrl}/api/v1/log-event`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-audit-key': config.apiKey
+            },
+            body: JSON.stringify({
+                ...event,
+                userEmail: config.userEmail || null
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[AuditShield] Event synced successfully:', data);
+
+            // If blocked, show notification
+            if (!data.allowed) {
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icon48.png',
+                    title: 'AuditShield - Access Blocked',
+                    message: data.reason || 'This tool is blocked by your organization policy'
+                });
+            }
+        } else if (response.status === 401) {
+            console.error('[AuditShield] Invalid API key. Please check your settings.');
+        } else if (response.status === 403) {
+            const data = await response.json();
+            console.warn('[AuditShield] Access blocked by policy:', data.reason);
+        } else {
+            console.warn('[AuditShield] Failed to sync event:', response.status);
+        }
+    } catch (error) {
+        console.error('[AuditShield] Failed to sync log:', error);
+    }
+}
 
 function handleNavigation(details: chrome.webNavigation.WebNavigationFramedCallbackDetails) {
     // Check if main frame
     if (details.frameId !== 0) return;
 
     const url = new URL(details.url);
-    const domain = url.hostname;
+    const hostname = url.hostname;
 
-    if (AI_DOMAINS.some(d => domain.includes(d))) {
-        console.log(`[AuditShield] AI Tool Usage Detected: ${domain}`);
+    // Find matching AI domain
+    const aiTool = AI_DOMAINS.find(d => hostname.includes(d.domain));
+
+    if (aiTool) {
+        console.log(`[AuditShield] AI Tool Usage Detected: ${aiTool.tool} (${hostname})`);
 
         // Log event to storage (local buffer)
         chrome.storage.local.get(['audit_log'], (result) => {
@@ -26,33 +91,23 @@ function handleNavigation(details: chrome.webNavigation.WebNavigationFramedCallb
             // Avoid duplicate log entries if timestamp is very close (debounce)
             const lastEntry = log[log.length - 1];
             const now = new Date().getTime();
-            if (lastEntry && (now - new Date(lastEntry.timestamp).getTime() < 5000) && lastEntry.domain === domain) {
+            if (lastEntry && (now - new Date(lastEntry.timestamp).getTime() < 5000) && lastEntry.domain === hostname) {
                 return; // Skip duplicate detection within 5 seconds for same domain
             }
 
             const newEvent = {
                 timestamp: new Date().toISOString(),
-                domain: domain,
-                url: details.url // In prod, might want to strip PII
+                domain: hostname,
+                url: details.url,
+                tool: aiTool.tool,
+                eventType: 'access'
             };
 
             const newLog = [...log, newEvent];
             chrome.storage.local.set({ audit_log: newLog });
 
-            // Identify user token (if strictly required for API)
             // Send to API
-            // Using localhost:3000 for standard dev. If your server is on 3001, update this.
-            fetch('http://localhost:3000/api/ingest', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 'Authorization': ... (add token if needed later)
-                },
-                body: JSON.stringify(newEvent)
-            }).then(res => {
-                if (res.ok) console.log("Event synced to AuditShield Cloud");
-                else console.warn("Failed to sync event", res.status);
-            }).catch(err => console.error("Failed to sync log", err));
+            sendEventToAPI(newEvent);
         });
     }
 }
@@ -62,3 +117,8 @@ chrome.webNavigation.onCompleted.addListener(handleNavigation, { url: [{ schemes
 
 // Listen for history updates (SPA navigation)
 chrome.webNavigation.onHistoryStateUpdated.addListener(handleNavigation, { url: [{ schemes: ['http', 'https'] }] });
+
+// Handle extension installation
+chrome.runtime.onInstalled.addListener(() => {
+    console.log('[AuditShield] Extension installed successfully');
+});

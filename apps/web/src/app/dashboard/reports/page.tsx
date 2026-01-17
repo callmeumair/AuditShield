@@ -1,122 +1,206 @@
-'use client';
+"use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileDown, FileText, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { FileText, Download, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
 
 export default function ReportsPage() {
-    const [downloading, setDownloading] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [generating, setGenerating] = useState(false);
 
-    const handleDownload = async () => {
-        setDownloading(true);
-        toast.loading("Generating PDF report...", { id: "pdf-download" });
+    const generateReport = async () => {
+        if (!startDate || !endDate) {
+            toast.error('Please select both start and end dates');
+            return;
+        }
 
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (start > end) {
+            toast.error('Start date must be before end date');
+            return;
+        }
+
+        setGenerating(true);
         try {
-            const response = await fetch('/api/reports/generate', { method: 'POST' });
+            const response = await fetch(
+                `/api/reports/export?startDate=${startDate}&endDate=${endDate}`
+            );
 
-            if (!response.ok) throw new Error('Generation failed');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `auditshield-report-${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            toast.success("Report downloaded successfully", { id: "pdf-download" });
+            if (response.ok) {
+                // Download the PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `auditshield-report-${startDate}-to-${endDate}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                toast.success('Report generated successfully!');
+            } else {
+                const error = await response.json();
+                toast.error(error.error || 'Failed to generate report');
+            }
         } catch (error) {
-            toast.error("Failed to generate report", { id: "pdf-download" });
-            console.error(error);
+            console.error('Failed to generate report:', error);
+            toast.error('Failed to generate report');
         } finally {
-            setDownloading(false);
+            setGenerating(false);
         }
     };
 
+    // Quick date range helpers
+    const setQuickRange = (days: number) => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        setStartDate(format(start, 'yyyy-MM-dd'));
+        setEndDate(format(end, 'yyyy-MM-dd'));
+    };
+
     return (
-        <div className="p-8 space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Compliance Reports</h1>
-                    <p className="text-muted-foreground/90 mt-2">
-                        Generate and export tamper-evident audit logs for your organization.
-                    </p>
-                </div>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
+                <p className="text-slate-500 mt-2">Generate compliance reports with tamper-proof hash verification</p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* PDF Report Card */}
-                <Card className="hover:shadow-lg transition-shadow">
+            {/* Report Generator */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+            >
+                <Card>
                     <CardHeader>
-                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                            <FileDown className="h-6 w-6" />
-                        </div>
-                        <CardTitle>Full Audit Trail</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            Generate Compliance Report
+                        </CardTitle>
                         <CardDescription>
-                            Complete list of all detected AI events, timestamped and SHA-256 hashed.
+                            Export audit logs as a PDF report with hash signatures for verification
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-6">
+                        {/* Quick Date Ranges */}
+                        <div>
+                            <Label className="text-sm font-medium text-slate-700">Quick Ranges</Label>
+                            <div className="flex gap-2 mt-2">
+                                {[
+                                    { label: 'Last 7 Days', days: 7 },
+                                    { label: 'Last 30 Days', days: 30 },
+                                    { label: 'Last 90 Days', days: 90 },
+                                ].map(range => (
+                                    <Button
+                                        key={range.days}
+                                        onClick={() => setQuickRange(range.days)}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        {range.label}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Custom Date Range */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="startDate" className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    Start Date
+                                </Label>
+                                <input
+                                    type="date"
+                                    id="startDate"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="endDate" className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    End Date
+                                </Label>
+                                <input
+                                    type="date"
+                                    id="endDate"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+
                         <Button
-                            onClick={handleDownload}
-                            className="w-full"
-                            disabled={downloading}
+                            onClick={generateReport}
+                            disabled={generating || !startDate || !endDate}
+                            className="w-full bg-primary hover:bg-primary/90"
                         >
-                            {downloading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Generating...
-                                </>
+                            {generating ? (
+                                <>Generating Report...</>
                             ) : (
                                 <>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Download PDF
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Generate & Download PDF
                                 </>
                             )}
                         </Button>
                     </CardContent>
                 </Card>
+            </motion.div>
 
-                {/* Future: CSV Export */}
-                <Card className="opacity-60">
-                    <CardHeader>
-                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center text-muted-foreground mb-4">
-                            <FileText className="h-6 w-6" />
-                        </div>
-                        <CardTitle>CSV Export</CardTitle>
-                        <CardDescription>
-                            Export raw data for custom analysis and reporting.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button className="w-full" variant="outline" disabled>
-                            Coming Soon
-                        </Button>
-                    </CardContent>
-                </Card>
+            {/* Report Features */}
+            <Card className="border-emerald-200 bg-emerald-50">
+                <CardHeader>
+                    <CardTitle className="text-emerald-900">Report Features</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-emerald-900 space-y-2">
+                    <div className="flex items-start gap-2">
+                        <div className="mt-0.5">✓</div>
+                        <div><strong>Tamper-Proof:</strong> Each audit log includes a SHA-256 hash signature for immutability verification</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <div className="mt-0.5">✓</div>
+                        <div><strong>Comprehensive:</strong> Includes summary statistics, detailed audit logs, and compliance metrics</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <div className="mt-0.5">✓</div>
+                        <div><strong>Audit-Ready:</strong> Professional PDF format suitable for compliance audits and regulatory requirements</div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <div className="mt-0.5">✓</div>
+                        <div><strong>Customizable:</strong> Select any date range to generate reports for specific periods</div>
+                    </div>
+                </CardContent>
+            </Card>
 
-                {/* Future: Scheduled Reports */}
-                <Card className="opacity-60">
-                    <CardHeader>
-                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center text-muted-foreground mb-4">
-                            <FileDown className="h-6 w-6" />
-                        </div>
-                        <CardTitle>Scheduled Reports</CardTitle>
-                        <CardDescription>
-                            Automatically generate and email reports weekly or monthly.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button className="w-full" variant="outline" disabled>
-                            Coming Soon
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Hash Verification Info */}
+            <Card className="border-blue-200 bg-blue-50">
+                <CardHeader>
+                    <CardTitle className="text-blue-900">Hash Verification</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-blue-900">
+                    <p className="mb-3">
+                        Each audit log entry includes a SHA-256 hash signature that proves the data hasn't been tampered with.
+                    </p>
+                    <p className="font-mono text-xs bg-blue-100 p-3 rounded">
+                        Hash = SHA256(prompt_text + timestamp + user_email)
+                    </p>
+                    <p className="mt-3">
+                        You can verify any log entry by recomputing its hash and comparing it to the stored signature in the database.
+                    </p>
+                </CardContent>
+            </Card>
         </div>
     );
 }

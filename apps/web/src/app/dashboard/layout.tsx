@@ -17,10 +17,12 @@ export default function DashboardLayout({
                         {/* Breadcrumbs could go here */}
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button size="sm" variant="outline" className="h-8 gap-2 border-border/60 hover:bg-secondary">
-                            <Download className="h-3.5 w-3.5" />
-                            Extension
-                        </Button>
+                        <a href="/downloads/auditshield-extension.zip" download="auditshield-extension.zip">
+                            <Button size="sm" variant="outline" className="h-8 gap-2 border-border/60 hover:bg-secondary">
+                                <Download className="h-3.5 w-3.5" />
+                                Extension
+                            </Button>
+                        </a>
                         <Button size="sm" className="h-8 shadow-md shadow-primary/20">Documentation</Button>
                     </div>
                 </header>
