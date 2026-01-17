@@ -411,14 +411,17 @@ export default function HomePage() {
                         </p>
                     </div>
                     <div className="flex justify-center">
-                        <div className="relative w-full max-w-2xl">
-                            <Image
-                                src="/brain/0b9f334d-7a2f-475d-b9a8-30ce49e785a5/integration_logos_1768657324232.png"
-                                alt="AI Tool Integrations: ChatGPT, Claude, Gemini, Copilot"
-                                width={600}
-                                height={150}
-                                className="w-full h-auto opacity-80 hover:opacity-100 transition-opacity"
-                            />
+                        <div className="flex flex-wrap items-center justify-center gap-8 max-w-3xl">
+                            {["ChatGPT", "Claude", "Gemini", "Copilot"].map((tool, index) => (
+                                <div
+                                    key={index}
+                                    className="px-6 py-3 rounded-lg bg-secondary/30 border border-border/40 grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300 group"
+                                >
+                                    <span className="text-lg font-semibold text-foreground/80 group-hover:text-foreground">
+                                        {tool}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </AnimatedSection>
