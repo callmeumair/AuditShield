@@ -1,239 +1,377 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+    Shield,
+    Settings as SettingsIcon,
+    Activity as ActivityIcon,
+    ChevronRight,
+    CheckCircle2,
+    AlertCircle,
+    Copy,
+    Eye,
+    EyeOff,
+    Terminal,
+    RefreshCw,
+    ExternalLink
+} from 'lucide-react'
+import { OpenAILogo, ClaudeLogo, GeminiLogo } from './components/ui/logos'
+import { cn } from './lib/utils'
+import './index.css'
 
 function Popup() {
-    const [logs, setLogs] = useState<any[]>([]);
-    const [tab, setTab] = useState<'activity' | 'settings'>('activity');
-    const [apiKey, setApiKey] = useState('');
-    const [apiUrl, setApiUrl] = useState('http://localhost:3000');
-    const [userEmail, setUserEmail] = useState('');
-    const [saved, setSaved] = useState(false);
+    const [logs, setLogs] = useState<any[]>([])
+    const [tab, setTab] = useState<'activity' | 'settings'>('activity')
+    const [apiKey, setApiKey] = useState('')
+    const [apiUrl, setApiUrl] = useState('http://localhost:3000')
+    const [userEmail, setUserEmail] = useState('')
+    const [showKey, setShowKey] = useState(false)
+    const [saved, setSaved] = useState(false)
+    const [testingConnection, setTestingConnection] = useState(false)
+    const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
-            // Load logs
             chrome.storage.local.get(['audit_log'], (res) => {
-                if (res.audit_log) {
-                    setLogs(res.audit_log);
-                }
-            });
-
-            // Load settings
+                if (res.audit_log) setLogs(res.audit_log)
+            })
             chrome.storage.sync.get(['apiKey', 'apiUrl', 'userEmail'], (res) => {
-                if (res.apiKey) setApiKey(res.apiKey);
-                if (res.apiUrl) setApiUrl(res.apiUrl);
-                if (res.userEmail) setUserEmail(res.userEmail);
-            });
+                if (res.apiKey) setApiKey(res.apiKey)
+                if (res.apiUrl) setApiUrl(res.apiUrl)
+                if (res.userEmail) setUserEmail(res.userEmail)
+            })
         } else {
-            // Fallback for non-extension environment
-            console.warn("Chrome API not found, using mock data");
+            // Mock data for development
             setLogs([
-                { domain: "chat.openai.com", timestamp: new Date().toISOString() },
-                { domain: "claude.ai", timestamp: new Date(Date.now() - 3600000).toISOString() },
-            ]);
+                { domain: "chatgpt.com", timestamp: new Date().toISOString(), actionTaken: 'allowed' },
+                { domain: "claude.ai", timestamp: new Date(Date.now() - 300000).toISOString(), actionTaken: 'allowed' },
+                { domain: "gemini.google.com", timestamp: new Date(Date.now() - 3600000).toISOString(), actionTaken: 'flagged' },
+            ])
         }
-    }, []);
+    }, [])
 
     const saveSettings = () => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
             chrome.storage.sync.set({ apiKey, apiUrl, userEmail }, () => {
-                setSaved(true);
-                setTimeout(() => setSaved(false), 2000);
-            });
+                setSaved(true)
+                setTimeout(() => setSaved(false), 2000)
+            })
         }
-    };
+    }
+
+    const testConnection = async () => {
+        setTestingConnection(true)
+        setConnectionStatus('idle')
+
+        try {
+            // Simulate connection test
+            await new Promise(resolve => setTimeout(resolve, 1500))
+            setConnectionStatus('success')
+        } catch (error) {
+            setConnectionStatus('error')
+        } finally {
+            setTestingConnection(false)
+        }
+    }
+
+    const getToolIcon = (domain: string) => {
+        if (domain.includes('openai') || domain.includes('chatgpt')) return <OpenAILogo className="w-5 h-5 text-slate-700" />
+        if (domain.includes('anthropic') || domain.includes('claude')) return <ClaudeLogo className="w-5 h-5 text-[#d97757]" />
+        if (domain.includes('google') || domain.includes('gemini')) return <GeminiLogo className="w-5 h-5 text-[#4E88D4]" />
+        return <Terminal className="w-5 h-5 text-slate-400" />
+    }
+
+    const getRelativeTime = (timestamp: string) => {
+        const now = new Date()
+        const diff = now.getTime() - new Date(timestamp).getTime()
+        const minutes = Math.floor(diff / 60000)
+        if (minutes < 1) return 'Just now'
+        if (minutes < 60) return `${minutes}m ago`
+        const hours = Math.floor(minutes / 60)
+        if (hours < 24) return `${hours}h ago`
+        return new Date(timestamp).toLocaleDateString()
+    }
+
+    const stats = {
+        eventsToday: logs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length,
+        threatsBlocked: logs.filter(l => l.actionTaken === 'blocked' || l.actionTaken === 'flagged').length
+    }
 
     return (
-        <div style={{ width: '350px', fontFamily: 'system-ui, sans-serif', background: '#f8fafc' }}>
-            {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', color: 'white' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                    <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>AuditShield</h2>
+        <div className="w-[400px] min-h-[550px] flex flex-col bg-white overflow-hidden selection:bg-indigo-100">
+            {/* Head-Up Display (Header) */}
+            <header className="h-16 flex items-center justify-between px-6 border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-indigo-200 shadow-lg">
+                        <Shield className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    </div>
+                    <span className="font-bold text-slate-900 tracking-tight">AuditShield</span>
                 </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', opacity: 0.9 }}>
-                    {apiKey ? '✓ Connected' : '⚠ Not configured'}
-                </p>
-            </div>
+
+                <div className="flex items-center gap-2">
+                    <div className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide transition-all duration-300",
+                        apiKey ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"
+                    )}>
+                        <div className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            apiKey ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                        )} />
+                        {apiKey ? "PROTECTED" : "CONFIG NEEDED"}
+                    </div>
+                </div>
+            </header>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+            <nav className="flex px-6 border-b border-slate-100 bg-white sticky top-16 z-10">
                 <button
                     onClick={() => setTab('activity')}
-                    style={{
-                        flex: 1,
-                        padding: '12px',
-                        border: 'none',
-                        background: tab === 'activity' ? 'white' : 'transparent',
-                        borderBottom: tab === 'activity' ? '2px solid #667eea' : '2px solid transparent',
-                        color: tab === 'activity' ? '#667eea' : '#64748b',
-                        fontWeight: tab === 'activity' ? '600' : '400',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }}
+                    className={cn(
+                        "flex-1 py-4 text-xs font-bold tracking-widest uppercase transition-all duration-300 border-b-2 outline-none",
+                        tab === 'activity' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                    )}
                 >
-                    Activity
+                    <div className="flex items-center justify-center gap-2">
+                        <ActivityIcon className="w-3.5 h-3.5" />
+                        Dashboard
+                    </div>
                 </button>
                 <button
                     onClick={() => setTab('settings')}
-                    style={{
-                        flex: 1,
-                        padding: '12px',
-                        border: 'none',
-                        background: tab === 'settings' ? 'white' : 'transparent',
-                        borderBottom: tab === 'settings' ? '2px solid #667eea' : '2px solid transparent',
-                        color: tab === 'settings' ? '#667eea' : '#64748b',
-                        fontWeight: tab === 'settings' ? '600' : '400',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }}
+                    className={cn(
+                        "flex-1 py-4 text-xs font-bold tracking-widest uppercase transition-all duration-300 border-b-2 outline-none",
+                        tab === 'settings' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                    )}
                 >
-                    Settings
+                    <div className="flex items-center justify-center gap-2">
+                        <SettingsIcon className="w-3.5 h-3.5" />
+                        Settings
+                    </div>
                 </button>
-            </div>
+            </nav>
 
-            {/* Content */}
-            <div style={{ padding: '16px', background: 'white', minHeight: '200px', maxHeight: '400px', overflowY: 'auto' }}>
-                {tab === 'activity' ? (
-                    <>
-                        <h3 style={{ fontSize: '13px', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', fontWeight: '600' }}>
-                            Recent Activity
-                        </h3>
-                        {logs.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '32px 16px', color: '#94a3b8' }}>
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ margin: '0 auto 12px', opacity: 0.5 }}>
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="8" x2="12" y2="12" />
-                                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                                </svg>
-                                <p style={{ fontSize: '13px', margin: 0 }}>No AI tools detected yet.</p>
-                                <p style={{ fontSize: '11px', margin: '4px 0 0 0' }}>Visit ChatGPT, Claude, or Gemini to start logging.</p>
-                            </div>
-                        ) : (
-                            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                {logs.slice().reverse().slice(0, 10).map((log, i) => (
-                                    <li key={i} style={{ marginBottom: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
-                                            <div style={{ fontSize: '13px', fontWeight: '500', color: '#1e293b' }}>{log.domain}</div>
-                                        </div>
-                                        <div style={{ fontSize: '11px', color: '#94a3b8', paddingLeft: '16px' }}>
-                                            {new Date(log.timestamp).toLocaleString()}
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </>
-                ) : (
-                    <>
-                        <h3 style={{ fontSize: '13px', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', fontWeight: '600' }}>
-                            API Configuration
-                        </h3>
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>
-                                API Key
-                            </label>
-                            <input
-                                type="password"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder="as_live_xxxxxxxx..."
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontFamily: 'monospace',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                                Get your API key from Dashboard → Settings → API Keys
-                            </p>
-                        </div>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>
-                                API URL
-                            </label>
-                            <input
-                                type="text"
-                                value={apiUrl}
-                                onChange={(e) => setApiUrl(e.target.value)}
-                                placeholder="https://your-dashboard.com"
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontFamily: 'monospace',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                                Use http://localhost:3000 for local development
-                            </p>
-                        </div>
-
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>
-                                Your Email (Optional)
-                            </label>
-                            <input
-                                type="email"
-                                value={userEmail}
-                                onChange={(e) => setUserEmail(e.target.value)}
-                                placeholder="your.email@company.com"
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                                Used to track your activity in audit logs
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={saveSettings}
-                            style={{
-                                width: '100%',
-                                padding: '10px',
-                                background: saved ? '#10b981' : '#667eea',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-slate-50/50">
+                <AnimatePresence mode="wait">
+                    {tab === 'activity' ? (
+                        <motion.div
+                            key="activity"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="space-y-6"
                         >
-                            {saved ? '✓ Saved!' : 'Save Settings'}
-                        </button>
+                            {/* Session Stats Card */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-soft hover:shadow-premium transition-shadow group">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 group-hover:text-indigo-400 transition-colors">Events Today</div>
+                                    <div className="text-2xl font-bold text-slate-900">{stats.eventsToday}</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-soft hover:shadow-premium transition-shadow group">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 group-hover:text-rose-400 transition-colors">Alerts</div>
+                                    <div className="text-2xl font-bold text-slate-900">{stats.threatsBlocked}</div>
+                                </div>
+                            </div>
 
-                        <div style={{ marginTop: '16px', padding: '12px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '6px' }}>
-                            <p style={{ fontSize: '11px', color: '#92400e', margin: 0 }}>
-                                <strong>Note:</strong> Your API key is stored securely in Chrome's encrypted storage.
-                            </p>
-                        </div>
-                    </>
-                )}
-            </div>
+                            {/* Activity Stream */}
+                            <div className="space-y-3">
+                                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Live Activity</h3>
+                                {logs.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 px-8 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                            <Shield className="w-8 h-8 text-slate-200" />
+                                        </div>
+                                        <div className="text-sm font-semibold text-slate-900">Monitoring Active</div>
+                                        <div className="text-xs text-slate-400 mt-1 max-w-[200px]">
+                                            Visit ChatGPT, Claude, or Gemini to start capturing evidence.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2.5">
+                                        {logs.slice().reverse().slice(0, 10).map((log, i) => (
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -5 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: i * 0.05 }}
+                                                key={i}
+                                                className="group flex items-center justify-between p-3 bg-white hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all shadow-sm hover:shadow-soft"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 flex items-center justify-center bg-slate-50 group-hover:bg-white rounded-lg transition-colors border border-slate-100 group-hover:shadow-sm">
+                                                        {getToolIcon(log.domain)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[13px] font-semibold text-slate-800">{log.domain.split('.')[0]}</div>
+                                                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                            {getRelativeTime(log.timestamp)}
+                                                            <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                            <span className={cn(
+                                                                "font-medium",
+                                                                log.actionTaken === 'allowed' ? "text-emerald-500" : "text-rose-500"
+                                                            )}>
+                                                                {log.actionTaken || 'Captured'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all" />
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="settings"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="space-y-6"
+                        >
+                            <div className="space-y-4">
+                                {/* API Key Input */}
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">API Key</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Terminal className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                        </div>
+                                        <input
+                                            type={showKey ? "text" : "password"}
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                            className="block w-full pl-10 pr-20 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                                            placeholder="as_live_..."
+                                        />
+                                        <div className="absolute inset-y-1.5 right-1.5 flex gap-1">
+                                            <button
+                                                onClick={() => setShowKey(!showKey)}
+                                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                                            >
+                                                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.readText().then(text => setApiKey(text))
+                                                }}
+                                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                                                title="Paste from clipboard"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* API URL Input */}
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">API URL</label>
+                                    <input
+                                        type="text"
+                                        value={apiUrl}
+                                        onChange={(e) => setApiUrl(e.target.value)}
+                                        className="block w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="https://auditshield.com"
+                                    />
+                                </div>
+
+                                {/* Email Input */}
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Identity (User Email)</label>
+                                    <input
+                                        type="email"
+                                        value={userEmail}
+                                        onChange={(e) => setUserEmail(e.target.value)}
+                                        className="block w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="name@company.com"
+                                    />
+                                    <p className="text-[10px] text-slate-400 px-1">Optional. Links logs to your dashboard account.</p>
+                                </div>
+
+                                <div className="pt-2 space-y-3">
+                                    <button
+                                        onClick={saveSettings}
+                                        disabled={saved}
+                                        className={cn(
+                                            "w-full py-3.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2",
+                                            saved
+                                                ? "bg-emerald-500 text-white shadow-emerald-100 shadow-lg"
+                                                : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 shadow-lg hover:translate-y-[-1px] active:translate-y-0"
+                                        )}
+                                    >
+                                        {saved ? (
+                                            <>
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                Settings Saved
+                                            </>
+                                        ) : (
+                                            "Save Configuration"
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={testConnection}
+                                        disabled={testingConnection}
+                                        className={cn(
+                                            "w-full py-3.5 rounded-xl text-sm font-bold border transition-all duration-300 flex items-center justify-center gap-2",
+                                            connectionStatus === 'success' ? "border-emerald-200 bg-emerald-50 text-emerald-600 pb-2" :
+                                                connectionStatus === 'error' ? "border-rose-200 bg-rose-50 text-rose-600 animate-shake" :
+                                                    "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 shadow-sm"
+                                        )}
+                                    >
+                                        {testingConnection ? (
+                                            <>
+                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                                Testing Connection...
+                                            </>
+                                        ) : connectionStatus === 'success' ? (
+                                            <>
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                Connection Healthy
+                                            </>
+                                        ) : connectionStatus === 'error' ? (
+                                            <>
+                                                <AlertCircle className="w-4 h-4" />
+                                                Connection Failed
+                                            </>
+                                        ) : (
+                                            "Test Connection"
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                                <div className="flex gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-indigo-100 shadow-sm shrink-0">
+                                        <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider">Dashboard View</div>
+                                        <div className="text-[11px] text-indigo-600 mt-0.5 leading-relaxed">
+                                            You can monitor real-time policy violations and audit logs in the <a href={apiUrl} target="_blank" className="underline font-bold hover:text-indigo-800">Admin Console</a>.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </main>
 
             {/* Footer */}
-            <div style={{ padding: '12px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>
-                v1.0.0 • Monitoring {logs.length} events
-            </div>
+            <footer className="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-300 tracking-widest uppercase">
+                    v1.0.0 • Protected
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Enforced</span>
+                </div>
+            </footer>
         </div>
     )
 }

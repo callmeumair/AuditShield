@@ -1,3 +1,5 @@
+export { };
+
 // Background Service Worker with API Key Support
 
 // Comprehensive AI domains to monitor
@@ -41,7 +43,7 @@ async function sendEventToAPI(event: any) {
             },
             body: JSON.stringify({
                 ...event,
-                userEmail: config.userEmail || null
+                userEmail: (config as any).userEmail || null
             })
         });
 

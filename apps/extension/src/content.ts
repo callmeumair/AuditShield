@@ -1,3 +1,5 @@
+export { };
+
 // Content Script for Data Leak Prevention
 // Runs on AI tool pages to monitor and block sensitive data
 
@@ -46,7 +48,6 @@ const DEFAULT_PATTERNS = [
 ];
 
 let policies: Policy[] = [];
-let isEnabled = true;
 
 // Fetch policies from API
 async function fetchPolicies() {
@@ -108,7 +109,7 @@ function analyzeText(text: string): RiskAnalysis {
 }
 
 // Show warning banner
-function showWarningBanner(element: HTMLElement, analysis: RiskAnalysis) {
+function showWarningBanner(_element: HTMLElement, analysis: RiskAnalysis) {
     // Remove existing banner if any
     const existingBanner = document.getElementById('auditshield-warning-banner');
     if (existingBanner) {
