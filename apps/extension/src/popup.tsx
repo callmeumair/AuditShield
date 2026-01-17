@@ -5,11 +5,20 @@ function Popup() {
     const [logs, setLogs] = useState<any[]>([]);
 
     useEffect(() => {
-        chrome.storage.local.get(['audit_log'], (res) => {
-            if (res.audit_log) {
-                setLogs(res.audit_log);
-            }
-        });
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.get(['audit_log'], (res) => {
+                if (res.audit_log) {
+                    setLogs(res.audit_log);
+                }
+            });
+        } else {
+            // Fallback for non-extension environment (e.g. Vercel preview)
+            console.warn("Chrome API not found, using mock data for preview");
+            setLogs([
+                { domain: "chat.openai.com", timestamp: new Date().toISOString() },
+                { domain: "claude.ai", timestamp: new Date(Date.now() - 3600000).toISOString() },
+            ]);
+        }
     }, []);
 
     return (
