@@ -34,7 +34,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
         formState: { errors },
         trigger,
         watch,
-    } = useForm<ContactFormData>({
+    } = useForm({
         resolver: zodResolver(contactFormSchema),
         mode: "onBlur",
         defaultValues: {
@@ -106,8 +106,8 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                         >
                             <div
                                 className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all ${currentStep >= step.id
-                                        ? "border-primary bg-primary text-primary-foreground"
-                                        : "border-border bg-background"
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-background"
                                     }`}
                             >
                                 {currentStep > step.id ? (
