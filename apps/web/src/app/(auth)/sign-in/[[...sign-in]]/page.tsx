@@ -170,6 +170,7 @@ export default function SignInPage() {
                                     formFieldLabel: "text-foreground/80",
                                 }
                             }}
+                            fallbackRedirectUrl="/dashboard"
                         />
                     </div>
                 </motion.div>
