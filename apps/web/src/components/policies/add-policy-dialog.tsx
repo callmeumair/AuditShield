@@ -58,28 +58,40 @@ export function AddPolicyDialog() {
                 <DialogHeader>
                     <DialogTitle>Add New Policy</DialogTitle>
                     <DialogDescription>
-                        Define a rule for a specific AI domain.
+                        Define a rule for a specific AI tool.
                     </DialogDescription>
                 </DialogHeader>
                 <form action={clientAction} className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="domain" className="text-right">
-                            Domain
+                        <Label htmlFor="toolName" className="text-right">
+                            AI Tool
                         </Label>
-                        <Input id="domain" name="domain" placeholder="openai.com" className="col-span-3" required />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="status" className="text-right">
-                            Status
-                        </Label>
-                        <Select name="status" defaultValue="allowed">
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Status" />
+                        <Select name="toolName" required>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select AI tool" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="allowed">Allowed</SelectItem>
-                                <SelectItem value="banned">Banned</SelectItem>
-                                <SelectItem value="review">Under Review</SelectItem>
+                                <SelectItem value="ChatGPT">ChatGPT</SelectItem>
+                                <SelectItem value="Claude">Claude</SelectItem>
+                                <SelectItem value="Gemini">Gemini</SelectItem>
+                                <SelectItem value="Copilot">Copilot</SelectItem>
+                                <SelectItem value="Perplexity">Perplexity</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="action" className="text-right">
+                            Action
+                        </Label>
+                        <Select name="action" defaultValue="allow">
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Action" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="allow">Allow</SelectItem>
+                                <SelectItem value="block">Block</SelectItem>
+                                <SelectItem value="review">Review</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

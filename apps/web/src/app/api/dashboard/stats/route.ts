@@ -8,8 +8,8 @@ export async function GET() {
         // Fetch total interactions (audit events)
         const [interactions] = await db.select({ value: count() }).from(auditEvents);
 
-        // Fetch active policies (status = 'allowed')
-        const [activePolicies] = await db.select({ value: count() }).from(policies).where(eq(policies.status, 'allowed'));
+        // Fetch active policies (enabled = 'true')
+        const [activePolicies] = await db.select({ value: count() }).from(policies).where(eq(policies.enabled, 'true'));
 
         // Mocking "Risk Violations" for now as we don't have a direct "violation" flag in events yet
         // In a real app, this would be a join between events and denied policies

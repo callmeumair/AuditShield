@@ -13,23 +13,24 @@ export async function addPolicy(formData: FormData) {
         return { error: 'Unauthorized' };
     }
 
-    // Find internal organization ID based on Clerk Org ID (or just use first for MVP)
-    const orgs = await db.select().from(organizations).limit(1);
+    // Find internal organization ID based on Clerk Org ID
+    const orgs = await db.select().from(organizations).where(eq(organizations.clerkOrgId, orgId)).limit(1);
     if (orgs.length === 0) return { error: 'No organization found' };
     const organizationId = orgs[0].id;
 
-    const domain = formData.get('domain') as string;
-    const status = formData.get('status') as string;
+    const toolName = formData.get('toolName') as string;
+    const action = formData.get('action') as string;
     const reason = formData.get('reason') as string;
 
-    if (!domain) return { error: 'Domain is required' };
+    if (!toolName) return { error: 'Tool name is required' };
 
     try {
         await db.insert(policies).values({
             organizationId,
-            domain,
-            status: status || 'allowed',
-            reason
+            toolName,
+            action: action || 'allow',
+            reason,
+            enabled: 'true'
         });
 
         revalidatePath('/dashboard/policies');
