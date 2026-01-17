@@ -43,7 +43,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
             email: "",
             phone: "",
             companyName: "",
-            companySize: undefined,
+            companySize: "" as any,
             industry: "",
             website: "",
             jobTitle: "",
@@ -52,6 +52,9 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
             message: "",
             preferredContactMethod: "email",
             preferredTime: "",
+            utmSource: "",
+            utmMedium: "",
+            utmCampaign: "",
         },
     });
 
@@ -143,7 +146,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-8">
                 <AnimatePresence mode="wait">
                     {/* Step 1: Personal Information */}
                     {currentStep === 1 && (
@@ -269,7 +272,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         className={errors.industry ? "border-red-500" : ""}
                                     />
                                     {errors.industry && (
-                                        <p className="text-sm text-red-500">{errors.industry.message}</p>
+                                        <p className="text-sm text-red-500">{errors.industry.message as string}</p>
                                     )}
                                 </div>
                             </div>
