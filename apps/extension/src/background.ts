@@ -3,12 +3,13 @@
 // Trusted domains to monitor
 const AI_DOMAINS = [
     'chat.openai.com',
+    'chatgpt.com', // Added support for new domain
     'claude.ai',
     'gemini.google.com',
     'copilot.microsoft.com'
 ];
 
-chrome.webNavigation.onCompleted.addListener((details) => {
+function handleNavigation(details: chrome.webNavigation.WebNavigationFramedCallbackDetails) {
     // Check if main frame
     if (details.frameId !== 0) return;
 
@@ -21,6 +22,14 @@ chrome.webNavigation.onCompleted.addListener((details) => {
         // Log event to storage (local buffer)
         chrome.storage.local.get(['audit_log'], (result) => {
             const log = result.audit_log || [];
+
+            // Avoid duplicate log entries if timestamp is very close (debounce)
+            const lastEntry = log[log.length - 1];
+            const now = new Date().getTime();
+            if (lastEntry && (now - new Date(lastEntry.timestamp).getTime() < 5000) && lastEntry.domain === domain) {
+                return; // Skip duplicate detection within 5 seconds for same domain
+            }
+
             const newEvent = {
                 timestamp: new Date().toISOString(),
                 domain: domain,
@@ -46,4 +55,10 @@ chrome.webNavigation.onCompleted.addListener((details) => {
             }).catch(err => console.error("Failed to sync log", err));
         });
     }
-}, { url: [{ schemes: ['http', 'https'] }] });
+}
+
+// Listen for initial page load
+chrome.webNavigation.onCompleted.addListener(handleNavigation, { url: [{ schemes: ['http', 'https'] }] });
+
+// Listen for history updates (SPA navigation)
+chrome.webNavigation.onHistoryStateUpdated.addListener(handleNavigation, { url: [{ schemes: ['http', 'https'] }] });
