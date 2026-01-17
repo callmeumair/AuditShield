@@ -16,6 +16,10 @@ import {
     Globe, Terminal, Eye, Shield, Play
 } from "lucide-react";
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/animations";
+import { LogoMarquee } from "@/components/landing/LogoMarquee";
+import { TrustBadges } from "@/components/landing/TrustBadges";
+import { DeveloperExperience } from "@/components/landing/DeveloperExperience";
+import { DataFlowAnimation } from "@/components/landing/DataFlowAnimation";
 
 export default function HomePage() {
     return (
@@ -167,6 +171,12 @@ export default function HomePage() {
                 </div>
             </section>
 
+            {/* Logo Marquee - Wall of Integrations */}
+            <LogoMarquee />
+
+            {/* Trust & Compliance Badges */}
+            <TrustBadges />
+
             {/* Key Features Overview */}
             <section className="py-24 px-6 md:px-12 relative">
                 <div className="max-w-7xl mx-auto">
@@ -251,6 +261,12 @@ export default function HomePage() {
                     </AnimatedSection>
                 </div>
             </section>
+
+            {/* Developer Experience Section */}
+            <DeveloperExperience />
+
+            {/* Data Flow Animation - How It Works */}
+            <DataFlowAnimation />
 
             {/* How It Works Preview */}
             <section className="py-24 bg-gradient-to-b from-secondary/30 to-background border-y border-border/50">

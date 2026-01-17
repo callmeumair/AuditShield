@@ -78,13 +78,13 @@ export default function PricingPage() {
                             </Button>
                         </motion.div>
 
-                        {/* Professional - Highlighted */}
+                        {/* Professional - Highlighted with Psychology */}
                         <motion.div
                             variants={staggerItem}
-                            className="p-8 rounded-2xl border-2 border-primary bg-card/50 backdrop-blur-sm shadow-xl flex flex-col relative scale-105"
+                            className="p-8 rounded-2xl border-2 border-blue-500 bg-card/50 backdrop-blur-sm shadow-2xl shadow-blue-500/20 flex flex-col relative transform scale-105 md:scale-110"
                         >
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-semibold rounded-full">
-                                MOST POPULAR
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold rounded-full shadow-lg">
+                                ⭐ MOST POPULAR
                             </div>
                             <div className="mb-6">
                                 <Building2 className="h-10 w-10 text-primary mb-4" />
@@ -129,8 +129,9 @@ export default function PricingPage() {
                                 <p className="text-muted-foreground">For large organizations</p>
                             </div>
                             <div className="mb-8">
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-5xl font-bold">Custom</span>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-3xl font-bold text-muted-foreground/90">Let's Talk</span>
+                                    <span className="text-sm text-muted-foreground/70">Custom pricing for your needs</span>
                                 </div>
                             </div>
                             <ul className="space-y-4 mb-8 flex-1">
