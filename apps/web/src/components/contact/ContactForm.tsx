@@ -172,7 +172,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         className={errors.firstName ? "border-red-500" : ""}
                                     />
                                     {errors.firstName && (
-                                        <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                                        <p className="text-sm text-red-500">{errors.firstName.message as string}</p>
                                     )}
                                 </div>
 
@@ -184,7 +184,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         className={errors.lastName ? "border-red-500" : ""}
                                     />
                                     {errors.lastName && (
-                                        <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                                        <p className="text-sm text-red-500">{errors.lastName.message as string}</p>
                                     )}
                                 </div>
                             </div>
@@ -198,7 +198,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                     className={errors.email ? "border-red-500" : ""}
                                 />
                                 {errors.email && (
-                                    <p className="text-sm text-red-500">{errors.email.message}</p>
+                                    <p className="text-sm text-red-500">{errors.email.message as string}</p>
                                 )}
                             </div>
 
@@ -211,7 +211,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                     className={errors.phone ? "border-red-500" : ""}
                                 />
                                 {errors.phone && (
-                                    <p className="text-sm text-red-500">{errors.phone.message}</p>
+                                    <p className="text-sm text-red-500">{errors.phone.message as string}</p>
                                 )}
                             </div>
                         </motion.div>
@@ -240,7 +240,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                     className={errors.companyName ? "border-red-500" : ""}
                                 />
                                 {errors.companyName && (
-                                    <p className="text-sm text-red-500">{errors.companyName.message}</p>
+                                    <p className="text-sm text-red-500">{errors.companyName.message as string}</p>
                                 )}
                             </div>
 
@@ -260,7 +260,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         <option value="1000+">1000+ employees</option>
                                     </select>
                                     {errors.companySize && (
-                                        <p className="text-sm text-red-500">{errors.companySize.message}</p>
+                                        <p className="text-sm text-red-500">{errors.companySize.message as string}</p>
                                     )}
                                 </div>
 
@@ -286,7 +286,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         className={errors.jobTitle ? "border-red-500" : ""}
                                     />
                                     {errors.jobTitle && (
-                                        <p className="text-sm text-red-500">{errors.jobTitle.message}</p>
+                                        <p className="text-sm text-red-500">{errors.jobTitle.message as string}</p>
                                     )}
                                 </div>
 
@@ -299,7 +299,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                         className={errors.website ? "border-red-500" : ""}
                                     />
                                     {errors.website && (
-                                        <p className="text-sm text-red-500">{errors.website.message}</p>
+                                        <p className="text-sm text-red-500">{errors.website.message as string}</p>
                                     )}
                                 </div>
                             </div>
@@ -344,7 +344,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
                                     className={errors.message ? "border-red-500" : ""}
                                 />
                                 {errors.message && (
-                                    <p className="text-sm text-red-500">{errors.message.message}</p>
+                                    <p className="text-sm text-red-500">{errors.message.message as string}</p>
                                 )}
                             </div>
 
