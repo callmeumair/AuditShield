@@ -14,7 +14,7 @@ import { Settings, Key, Bell, Copy, Eye, EyeOff } from "lucide-react";
 export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
     const [showApiKey, setShowApiKey] = useState(false);
-    const [apiKey] = useState("as_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    const [apiKey] = useState("as_live_" + "x".repeat(40));
 
     const handleSave = async (section: string) => {
         setSaving(true);
