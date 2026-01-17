@@ -35,6 +35,8 @@ export const cache = {
      * Get cached value
      */
     async get<T>(key: string): Promise<T | null> {
+        if (!redis) return null; // No cache available
+
         try {
             const value = await redis.get(key);
             return value as T | null;
@@ -48,6 +50,8 @@ export const cache = {
      * Set cached value with TTL
      */
     async set(key: string, value: any, ttl: number): Promise<void> {
+        if (!redis) return; // No cache available
+
         try {
             await redis.setex(key, ttl, JSON.stringify(value));
         } catch (error) {
@@ -59,6 +63,8 @@ export const cache = {
      * Delete cached value
      */
     async del(key: string): Promise<void> {
+        if (!redis) return; // No cache available
+
         try {
             await redis.del(key);
         } catch (error) {
@@ -70,6 +76,8 @@ export const cache = {
      * Delete multiple cached values by pattern
      */
     async delPattern(pattern: string): Promise<void> {
+        if (!redis) return; // No cache available
+
         try {
             // Upstash Redis doesn't support SCAN, so we'll use a simple delete
             // For production, consider maintaining a set of keys to delete
@@ -81,12 +89,18 @@ export const cache = {
 
     /**
      * Get or set cached value (cache-aside pattern)
+     * Falls back to direct fetch when Redis is unavailable
      */
     async getOrSet<T>(
         key: string,
         ttl: number,
         fetchFn: () => Promise<T>
     ): Promise<T> {
+        // If Redis is unavailable, just fetch directly
+        if (!redis) {
+            return await fetchFn();
+        }
+
         // Try to get from cache
         const cached = await this.get<T>(key);
         if (cached !== null) {
