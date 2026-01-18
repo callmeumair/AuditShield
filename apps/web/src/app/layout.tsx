@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, Roboto_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -35,6 +36,7 @@ export default function RootLayout({
           className={`${inter.variable} ${robotoMono.variable} antialiased font-sans`}
         >
           {children}
+          <Analytics />
           <Toaster />
         </body>
       </html>
