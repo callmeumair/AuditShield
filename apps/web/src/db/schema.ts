@@ -45,6 +45,25 @@ export const policies = pgTable('policies', {
     }
 });
 
+// Policy Versions - immutable version history
+export const policyVersions = pgTable('policy_versions', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    policyId: uuid('policy_id').references(() => policies.id, { onDelete: 'cascade' }).notNull(),
+    version: integer('version').notNull(), // Incrementing version number
+    toolName: text('tool_name').notNull(),
+    action: text('action').notNull(),
+    rulesJson: jsonb('rules_json'),
+    reason: text('reason'),
+    effectiveFrom: timestamp('effective_from').notNull(),
+    createdBy: text('created_by').notNull(), // Clerk user ID
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+    return {
+        policyIdx: index('idx_policy_versions_policy').on(table.policyId),
+        effectiveIdx: index('idx_policy_versions_effective').on(table.effectiveFrom),
+    }
+});
+
 // Audit Logs - comprehensive event logging with immutability proof
 export const auditLogs = pgTable('audit_logs', {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -71,21 +90,66 @@ export const auditLogs = pgTable('audit_logs', {
     }
 });
 
+// Incidents - flagged violations requiring attention
+export const incidents = pgTable('incidents', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    auditLogId: uuid('audit_log_id').references(() => auditLogs.id, { onDelete: 'cascade' }).notNull(),
+    title: text('title').notNull(),
+    severity: text('severity').notNull().default('medium'), // 'low', 'medium', 'high', 'critical'
+    status: text('status').notNull().default('open'), // 'open', 'investigating', 'resolved', 'dismissed'
+    assignedTo: text('assigned_to'), // Clerk user ID
+    notes: text('notes'),
+    resolvedAt: timestamp('resolved_at'),
+    resolvedBy: text('resolved_by'), // Clerk user ID
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+    return {
+        orgIdx: index('idx_incidents_org').on(table.organizationId),
+        statusIdx: index('idx_incidents_status').on(table.status),
+        severityIdx: index('idx_incidents_severity').on(table.severity),
+        assignedIdx: index('idx_incidents_assigned').on(table.assignedTo),
+    }
+});
+
+// Clients - external users with read-only report access
+export const clients = pgTable('clients', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    accessToken: text('access_token').unique().notNull(), // Unique token for authentication
+    lastAccessAt: timestamp('last_access_at'),
+    expiresAt: timestamp('expires_at').notNull(), // Time-limited access
+    createdBy: text('created_by').notNull(), // Clerk user ID who invited
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at'),
+}, (table) => {
+    return {
+        orgIdx: index('idx_clients_org').on(table.organizationId),
+        emailIdx: index('idx_clients_email').on(table.email),
+        tokenIdx: index('idx_clients_token').on(table.accessToken),
+    }
+});
+
 // Reports - generated compliance reports
 export const reports = pgTable('reports', {
     id: uuid('id').defaultRandom().primaryKey(),
     organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
-    generatedBy: text('generated_by'), // User who generated the report
+    generatedBy: text('generated_by').notNull(), // User who generated the report
     periodStart: timestamp('period_start').notNull(),
     periodEnd: timestamp('period_end').notNull(),
     pdfUrl: text('pdf_url'), // S3 URL or local path
-    reportHash: text('report_hash').notNull(), // Hash of the report for verification
+    reportHash: text('report_hash').notNull(), // SHA-256 hash of PDF for verification
     totalEvents: integer('total_events').default(0),
     totalViolations: integer('total_violations').default(0),
-    createdAt: timestamp('created_at').defaultNow(),
+    status: text('status').default('generated'), // 'generating', 'generated', 'failed'
+    createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => {
     return {
         orgIdx: index('idx_reports_org').on(table.organizationId),
+        periodIdx: index('idx_reports_period').on(table.periodStart, table.periodEnd),
     }
 });
 

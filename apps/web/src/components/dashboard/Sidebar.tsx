@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton, OrganizationSwitcher } from "@clerk/nextjs";
-import { ShieldCheck, LayoutDashboard, FileText, Settings, Shield, Activity } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, FileText, Settings, Shield, Activity, AlertTriangle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Live Feed', href: '/dashboard/live-feed', icon: Activity },
+    { name: 'AI Activity', href: '/dashboard/activity', icon: Activity },
+    { name: 'Incidents', href: '/dashboard/incidents', icon: AlertTriangle },
     { name: 'Reports', href: '/dashboard/reports', icon: FileText },
     { name: 'Policies', href: '/dashboard/policies', icon: Shield },
+    { name: 'Clients', href: '/dashboard/clients', icon: Users },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

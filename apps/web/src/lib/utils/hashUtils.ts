@@ -44,3 +44,48 @@ export function maskApiKey(apiKey: string): string {
     const suffix = apiKey.substring(apiKey.length - 6);
     return `${prefix}...${suffix}`;
 }
+
+/**
+ * Generate hash for audit log entry
+ * Combines critical fields to create tamper-evident signature
+ */
+export function generateAuditLogHash(data: {
+    organizationId: string;
+    userId?: string | null;
+    tool: string;
+    domain: string;
+    actionTaken: string;
+    timestamp: Date;
+}): string {
+    const content = JSON.stringify({
+        organizationId: data.organizationId,
+        userId: data.userId || '',
+        tool: data.tool,
+        domain: data.domain,
+        actionTaken: data.actionTaken,
+        timestamp: data.timestamp.toISOString(),
+    });
+    return generateHash(content);
+}
+
+/**
+ * Generate hash for report PDF
+ * Creates tamper-evident signature for compliance reports
+ */
+export function generateReportHash(pdfBuffer: Buffer): string {
+    return crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+}
+
+/**
+ * Format hash for display (shortened with full hash in tooltip)
+ */
+export function formatHashForDisplay(hash: string): {
+    short: string;
+    full: string;
+} {
+    return {
+        short: `${hash.substring(0, 8)}...${hash.substring(hash.length - 8)}`,
+        full: hash,
+    };
+}
+
