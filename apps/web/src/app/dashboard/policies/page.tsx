@@ -1,318 +1,183 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Shield, Plus, Trash2, Edit, Save, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from "react";
+import useSWR from "swr";
+import { format } from "date-fns";
+import { History, FileText, Lock } from "lucide-react";
 
-interface Policy {
-    id: string;
-    toolName: string;
-    action: string;
-    rulesJson: any;
-    reason: string | null;
-    enabled: string;
-    createdAt: string;
-}
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-const AI_TOOLS = ['ChatGPT', 'Claude', 'Gemini', 'Copilot', 'Perplexity', 'Other'];
-const ACTIONS = [
-    { value: 'allow', label: 'Allow', color: 'text-emerald-600' },
-    { value: 'block', label: 'Block', color: 'text-rose-600' },
-    { value: 'review', label: 'Review', color: 'text-amber-600' },
-];
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PoliciesPage() {
-    const [policies, setPolicies] = useState<Policy[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [showNewForm, setShowNewForm] = useState(false);
+    const { data: policies } = useSWR('/api/policies', fetcher);
+    const activePolicy = policies?.[0]; // Assuming first is active for MVP
 
-    // Form state
-    const [formData, setFormData] = useState({
-        toolName: '',
-        action: 'allow',
-        reason: '',
-        enabled: 'true'
-    });
+    const { data: versions } = useSWR(
+        activePolicy ? `/api/policies/versions/${activePolicy.id}` : null,
+        fetcher
+    );
 
-    useEffect(() => {
-        fetchPolicies();
-    }, []);
+    const [selectedVersion, setSelectedVersion] = useState<any>(null);
 
-    const fetchPolicies = async () => {
-        try {
-            const response = await fetch('/api/v1/policies');
-            if (response.ok) {
-                const data = await response.json();
-                setPolicies(data.policies);
-            }
-        } catch (error) {
-            console.error('Failed to fetch policies:', error);
-            toast.error('Failed to load policies');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const createPolicy = async () => {
-        if (!formData.toolName || !formData.action) {
-            toast.error('Please fill in all required fields');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/v1/policies', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                await fetchPolicies();
-                setShowNewForm(false);
-                setFormData({ toolName: '', action: 'allow', reason: '', enabled: 'true' });
-                toast.success('Policy created successfully!');
-            } else {
-                toast.error('Failed to create policy');
-            }
-        } catch (error) {
-            console.error('Failed to create policy:', error);
-            toast.error('Failed to create policy');
-        }
-    };
-
-    const updatePolicy = async (id: string, updates: Partial<Policy>) => {
-        try {
-            const response = await fetch('/api/v1/policies', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, ...updates })
-            });
-
-            if (response.ok) {
-                await fetchPolicies();
-                setEditingId(null);
-                toast.success('Policy updated successfully!');
-            } else {
-                toast.error('Failed to update policy');
-            }
-        } catch (error) {
-            console.error('Failed to update policy:', error);
-            toast.error('Failed to update policy');
-        }
-    };
-
-    const deletePolicy = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this policy?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/v1/policies?id=${id}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                await fetchPolicies();
-                toast.success('Policy deleted successfully');
-            } else {
-                toast.error('Failed to delete policy');
-            }
-        } catch (error) {
-            console.error('Failed to delete policy:', error);
-            toast.error('Failed to delete policy');
-        }
-    };
-
-    const getActionColor = (action: string) => {
-        const actionObj = ACTIONS.find(a => a.value === action);
-        return actionObj?.color || 'text-slate-600';
-    };
+    // If no selected version, show the latest/active one from versions list
+    const displayVersion = selectedVersion || versions?.versions?.[0];
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Policies</h1>
-                    <p className="text-slate-500 mt-2">Manage AI tool access and data leak prevention rules</p>
-                </div>
-                <Button
-                    onClick={() => setShowNewForm(!showNewForm)}
-                    className="bg-primary hover:bg-primary/90"
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Policy
-                </Button>
+        <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
+            <div className="flex flex-col gap-2 shrink-0">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                    Governance Policies
+                </h1>
+                <p className="text-muted-foreground">
+                    Manage and track the evolution of your AI usage policies.
+                </p>
             </div>
 
-            {/* New Policy Form */}
-            <AnimatePresence>
-                {showNewForm && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                    >
-                        <Card className="border-primary/30">
-                            <CardHeader>
-                                <CardTitle>Create New Policy</CardTitle>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
+
+                {/* History List */}
+                <Card className="col-span-1 border-border/60 flex flex-col h-full bg-slate-50/50">
+                    <CardHeader className="pb-3 shrink-0">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <History className="h-4 w-4" />
+                            Version History
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 p-0 relative">
+                        <div className="absolute inset-0 overflow-y-auto">
+                            <div className="flex flex-col divide-y divide-border/40">
+                                {versions?.versions?.map((version: any) => {
+                                    const isActive = version.version === versions.versions[0].version;
+                                    const isSelected = displayVersion?.id === version.id;
+
+                                    return (
+                                        <button
+                                            key={version.id}
+                                            onClick={() => setSelectedVersion(version)}
+                                            className={`flex flex-col items-start p-4 hover:bg-white transition-all text-left border-l-4 ${isSelected
+                                                    ? "bg-white border-l-primary shadow-sm"
+                                                    : "border-l-transparent"
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between w-full mb-1">
+                                                <span className={`font-semibold text-sm ${isSelected ? "text-primary" : ""}`}>
+                                                    Version {version.version}
+                                                </span>
+                                                {isActive ? (
+                                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                                                        Active
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                        Archived
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mb-2 font-mono">
+                                                {format(new Date(version.createdAt), "MMM d, yyyy • HH:mm")}
+                                            </div>
+                                            <div className="text-xs text-slate-600 line-clamp-2 italic">
+                                                "{version.changeNotes || "Update"}"
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                                {!versions && (
+                                    <div className="p-8 text-center text-sm text-muted-foreground">Loading history...</div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Document Viewer */}
+                <Card className="col-span-1 md:col-span-2 border-border/60 flex flex-col h-full shadow-sm bg-white">
+                    <CardHeader className="border-b border-slate-100 bg-white pb-4 shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <CardTitle className="flex items-center gap-2 font-serif text-xl tracking-tight">
+                                    <FileText className="h-5 w-5 text-slate-400" />
+                                    Policy Document {displayVersion ? `v${displayVersion.version}.0` : ''}
+                                </CardTitle>
                                 <CardDescription>
-                                    Define rules for AI tool usage and data protection
+                                    {displayVersion
+                                        ? `Effective from ${format(new Date(displayVersion.createdAt), "PPP")}`
+                                        : "Select a version to view"}
                                 </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="toolName">AI Tool</Label>
-                                        <Select
-                                            value={formData.toolName}
-                                            onValueChange={(value) => setFormData({ ...formData, toolName: value })}
-                                        >
-                                            <SelectTrigger className="mt-1">
-                                                <SelectValue placeholder="Select tool" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {AI_TOOLS.map(tool => (
-                                                    <SelectItem key={tool} value={tool}>{tool}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="action">Action</Label>
-                                        <Select
-                                            value={formData.action}
-                                            onValueChange={(value) => setFormData({ ...formData, action: value })}
-                                        >
-                                            <SelectTrigger className="mt-1">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {ACTIONS.map(action => (
-                                                    <SelectItem key={action.value} value={action.value}>
-                                                        <span className={action.color}>{action.label}</span>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label htmlFor="reason">Reason (Optional)</Label>
-                                    <Textarea
-                                        id="reason"
-                                        placeholder="Why is this policy needed?"
-                                        value={formData.reason}
-                                        onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                                        className="mt-1"
-                                        rows={2}
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button onClick={createPolicy} className="bg-primary hover:bg-primary/90">
-                                        <Save className="h-4 w-4 mr-2" />
-                                        Create Policy
-                                    </Button>
-                                    <Button onClick={() => setShowNewForm(false)} variant="outline">
-                                        <X className="h-4 w-4 mr-2" />
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Existing Policies */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-primary" />
-                        Active Policies
-                    </CardTitle>
-                    <CardDescription>
-                        {policies.length} {policies.length === 1 ? 'policy' : 'policies'} configured
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                        <div className="text-center py-8 text-slate-500">Loading...</div>
-                    ) : policies.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500">
-                            No policies configured yet. Create one to get started.
+                            </div>
+                            {displayVersion && (
+                                <Badge variant="secondary" className="font-mono text-xs text-muted-foreground bg-slate-50">
+                                    ID: {displayVersion.id.slice(0, 8)}
+                                </Badge>
+                            )}
                         </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {policies.map((policy) => (
-                                <motion.div
-                                    key={policy.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                                >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-primary/10 rounded-lg">
-                                                <Shield className="h-4 w-4 text-primary" />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-slate-900">
-                                                    {policy.toolName}
-                                                </div>
-                                                <div className="text-sm text-slate-500 mt-1">
-                                                    Action: <span className={`font-medium ${getActionColor(policy.action)}`}>
-                                                        {policy.action.toUpperCase()}
-                                                    </span>
-                                                    {policy.reason && (
-                                                        <> • {policy.reason}</>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="text-xs text-slate-400 ml-12 mt-1">
-                                            Created: {new Date(policy.createdAt).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${policy.enabled === 'true' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            {policy.enabled === 'true' ? 'Enabled' : 'Disabled'}
-                                        </div>
-                                        <Button
-                                            onClick={() => deletePolicy(policy.id)}
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto p-8 font-serif leading-relaxed text-slate-800">
+                        {displayVersion ? (
+                            <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
+                                <div className="text-center pb-8 border-b-2 border-slate-100 mb-8">
+                                    <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-widest mb-2">
+                                        {displayVersion.name || "AI Usage Policy"}
+                                    </h2>
+                                    <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
+                                        Organization Directive #{displayVersion.id.slice(0, 6).toUpperCase()}
+                                    </p>
+                                </div>
 
-            {/* Info Card */}
-            <Card className="border-blue-200 bg-blue-50">
-                <CardHeader>
-                    <CardTitle className="text-blue-900">Policy Actions Explained</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-blue-900 space-y-2">
-                    <div><strong className="text-emerald-600">Allow:</strong> Tool usage is permitted and logged for audit purposes</div>
-                    <div><strong className="text-rose-600">Block:</strong> Tool access is completely blocked and attempts are logged</div>
-                    <div><strong className="text-amber-600">Review:</strong> Usage is allowed but flagged for manual review</div>
-                </CardContent>
-            </Card>
+                                <div className="prose prose-slate max-w-none">
+                                    <section>
+                                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide mb-4 text-sm border-b border-slate-200 pb-2">
+                                            1. Configuration Rules
+                                        </h3>
+                                        <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 font-mono text-sm text-slate-600">
+                                            <pre className="whitespace-pre-wrap">
+                                                {JSON.stringify(displayVersion.ruleSet, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </section>
+
+                                    <section className="mt-8">
+                                        <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide mb-4 text-sm border-b border-slate-200 pb-2">
+                                            2. Change Attribution
+                                        </h3>
+                                        <p className="text-sm text-slate-600">
+                                            This version was authorized by <span className="font-semibold text-slate-900">{displayVersion.changedBy || "System Admin"}</span> on {format(new Date(displayVersion.createdAt), "PPP")} at {format(new Date(displayVersion.createdAt), "p")}.
+                                        </p>
+                                        <p className="text-sm text-slate-600 mt-2">
+                                            <strong>Notes:</strong> {displayVersion.changeNotes || "Routine update."}
+                                        </p>
+                                    </section>
+                                </div>
+
+                                <div className="mt-16 pt-8 border-t border-slate-100 flex justify-between items-center text-xs text-slate-400 font-mono">
+                                    <div>
+                                        SECURE TIMESTAMP: {new Date(displayVersion.createdAt).toISOString()}
+                                    </div>
+                                    <div>
+                                        PAGE 1 OF 1
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 text-center">
+                                <Lock className="h-12 w-12 mb-4 text-slate-200" />
+                                <h3 className="text-lg font-medium text-slate-900">Select a Version</h3>
+                                <p className="text-sm max-w-sm mt-1">
+                                    Select a policy version from the history sidebar to view its immutable record and configuration snapshot.
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }

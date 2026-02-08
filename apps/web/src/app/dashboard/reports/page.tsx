@@ -1,204 +1,217 @@
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { FileText, Download, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { useState } from "react";
+import useSWR from "swr";
+import { format } from "date-fns";
+import {
+    FileText,
+    Download,
+    ShieldCheck,
+    Eye,
+    Loader2,
+    CheckCircle,
+    AlertTriangle
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { TamperProofBadge } from "@/components/shared/TamperProofBadge";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function ReportsPage() {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [generating, setGenerating] = useState(false);
+    const [page, setPage] = useState(1);
+    const [evidenceMode, setEvidenceMode] = useState(false);
+    const { data, error, isLoading } = useSWR(
+        `/api/reports?page=${page}&limit=10`,
+        fetcher
+    );
 
-    const generateReport = async () => {
-        if (!startDate || !endDate) {
-            toast.error('Please select both start and end dates');
-            return;
-        }
+    const [verifyingId, setVerifyingId] = useState<string | null>(null);
+    const [verificationResult, setVerificationResult] = useState<any>(null);
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        if (start > end) {
-            toast.error('Start date must be before end date');
-            return;
-        }
-
-        setGenerating(true);
+    const handleVerify = async (reportId: string) => {
+        setVerifyingId(reportId);
+        setVerificationResult(null);
         try {
-            const response = await fetch(
-                `/api/reports/export?startDate=${startDate}&endDate=${endDate}`
-            );
-
-            if (response.ok) {
-                // Download the PDF
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `auditshield-report-${startDate}-to-${endDate}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                toast.success('Report generated successfully!');
-            } else {
-                const error = await response.json();
-                toast.error(error.error || 'Failed to generate report');
-            }
-        } catch (error) {
-            console.error('Failed to generate report:', error);
-            toast.error('Failed to generate report');
+            const res = await fetch(`/api/reports/${reportId}/verify`);
+            const result = await res.json();
+            setVerificationResult(result);
+        } catch (err) {
+            console.error("Verification failed", err);
+            setVerificationResult({ verified: false, message: "Verification request failed" });
         } finally {
-            setGenerating(false);
+            setVerifyingId(null);
         }
-    };
-
-    // Quick date range helpers
-    const setQuickRange = (days: number) => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - days);
-        setStartDate(format(start, 'yyyy-MM-dd'));
-        setEndDate(format(end, 'yyyy-MM-dd'));
     };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
-                <p className="text-slate-500 mt-2">Generate compliance reports with tamper-proof hash verification</p>
+        <div className={`space-y-6 transition-all duration-500 ${evidenceMode ? "max-w-5xl mx-auto pt-10" : ""}`}>
+            <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                        {evidenceMode ? "Audit Evidence Ledger" : "Compliance Reports"}
+                    </h1>
+                    <p className="text-muted-foreground">
+                        {evidenceMode
+                            ? "immutable. verified. signature-enforced."
+                            : "Manage and verify tamper-evident audit reports."}
+                    </p>
+                </div>
+                <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 p-2 rounded-lg border">
+                    <Switch id="evidence-mode" checked={evidenceMode} onCheckedChange={setEvidenceMode} />
+                    <Label htmlFor="evidence-mode" className="text-sm font-medium cursor-pointer">Evidence Mode</Label>
+                </div>
             </div>
 
-            {/* Report Generator */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-primary" />
-                            Generate Compliance Report
-                        </CardTitle>
-                        <CardDescription>
-                            Export audit logs as a PDF report with hash signatures for verification
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Quick Date Ranges */}
-                        <div>
-                            <Label className="text-sm font-medium text-slate-700">Quick Ranges</Label>
-                            <div className="flex gap-2 mt-2">
-                                {[
-                                    { label: 'Last 7 Days', days: 7 },
-                                    { label: 'Last 30 Days', days: 30 },
-                                    { label: 'Last 90 Days', days: 90 },
-                                ].map(range => (
-                                    <Button
-                                        key={range.days}
-                                        onClick={() => setQuickRange(range.days)}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        {range.label}
-                                    </Button>
+            {!evidenceMode && (
+                <div className="flex items-center justify-between">
+                    <DateRangePicker onChange={() => { }} />
+                    <Button>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate New Report
+                    </Button>
+                </div>
+            )}
+
+            <Card className={evidenceMode ? "border-2 border-slate-900 shadow-2xl scale-[1.01] transition-all" : ""}>
+                <CardHeader>
+                    <CardTitle>Generated Reports</CardTitle>
+                    <CardDescription>
+                        A secure ledger of all compliance documentation generated by the system.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : error ? (
+                        <div className="text-center p-8 text-rose-500">
+                            Failed to load reports. Please try again.
+                        </div>
+                    ) : !data?.data?.length ? (
+                        <div className="text-center p-8 text-muted-foreground">
+                            No reports found. Generate one to get started.
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Report ID</TableHead>
+                                    <TableHead>Period</TableHead>
+                                    <TableHead>Generated At</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Integrity Hash</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.data.map((report: any) => (
+                                    <TableRow key={report.id}>
+                                        <TableCell className="font-mono text-xs text-muted-foreground">
+                                            {report.id.slice(0, 8)}...
+                                        </TableCell>
+                                        <TableCell>
+                                            {format(new Date(report.periodStart), "MMM d")} - {format(new Date(report.periodEnd), "MMM d, yyyy")}
+                                        </TableCell>
+                                        <TableCell>
+                                            {format(new Date(report.createdAt), "PP p")}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={report.status as any} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TamperProofBadge hash={report.reportHash} verified={true} />
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="ghost" size="sm" onClick={() => handleVerify(report.id)}>
+                                                            <ShieldCheck className="h-4 w-4 mr-1" />
+                                                            Verify
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Report Integrity Verification</DialogTitle>
+                                                            <DialogDescription>
+                                                                Verifying the cryptographic signature of this document against the immutable ledger.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="py-4 space-y-4">
+                                                            {verifyingId === report.id ? (
+                                                                <div className="flex items-center gap-2 text-muted-foreground">
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    Verifying hash...
+                                                                </div>
+                                                            ) : verificationResult ? (
+                                                                <div className={`p-4 rounded-lg border ${verificationResult.verified ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800' : 'bg-rose-50/50 border-rose-200 text-rose-800'}`}>
+                                                                    <div className="flex items-center gap-2 font-semibold mb-2">
+                                                                        {verificationResult.verified ? (
+                                                                            <CheckCircle className="h-5 w-5" />
+                                                                        ) : (
+                                                                            <AlertTriangle className="h-5 w-5" />
+                                                                        )}
+                                                                        {verificationResult.verified ? "Integrity Verified" : "Verification Failed"}
+                                                                    </div>
+                                                                    <p className="text-sm">{verificationResult.message}</p>
+                                                                    <div className="mt-4 text-xs font-mono bg-white/50 p-2 rounded">
+                                                                        <div className="flex justify-between">
+                                                                            <span>Stored Hash:</span>
+                                                                            <span>{verificationResult.originalHash?.slice(0, 20)}...</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-bold">
+                                                                            <span>Computed Hash:</span>
+                                                                            <span>{verificationResult.currentHash?.slice(0, 20)}...</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <a href={report.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                                        <Download className="h-4 w-4 mr-1" />
+                                                        PDF
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </div>
-                        </div>
-
-                        {/* Custom Date Range */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="startDate" className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    Start Date
-                                </Label>
-                                <input
-                                    type="date"
-                                    id="startDate"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="endDate" className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    End Date
-                                </Label>
-                                <input
-                                    type="date"
-                                    id="endDate"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                        </div>
-
-                        <Button
-                            onClick={generateReport}
-                            disabled={generating || !startDate || !endDate}
-                            className="w-full bg-primary hover:bg-primary/90"
-                        >
-                            {generating ? (
-                                <>Generating Report...</>
-                            ) : (
-                                <>
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Generate & Download PDF
-                                </>
-                            )}
-                        </Button>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Report Features */}
-            <Card className="border-emerald-200 bg-emerald-50">
-                <CardHeader>
-                    <CardTitle className="text-emerald-900">Report Features</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-emerald-900 space-y-2">
-                    <div className="flex items-start gap-2">
-                        <div className="mt-0.5">✓</div>
-                        <div><strong>Tamper-Proof:</strong> Each audit log includes a SHA-256 hash signature for immutability verification</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <div className="mt-0.5">✓</div>
-                        <div><strong>Comprehensive:</strong> Includes summary statistics, detailed audit logs, and compliance metrics</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <div className="mt-0.5">✓</div>
-                        <div><strong>Audit-Ready:</strong> Professional PDF format suitable for compliance audits and regulatory requirements</div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <div className="mt-0.5">✓</div>
-                        <div><strong>Customizable:</strong> Select any date range to generate reports for specific periods</div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Hash Verification Info */}
-            <Card className="border-blue-200 bg-blue-50">
-                <CardHeader>
-                    <CardTitle className="text-blue-900">Hash Verification</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-blue-900">
-                    <p className="mb-3">
-                        Each audit log entry includes a SHA-256 hash signature that proves the data hasn't been tampered with.
-                    </p>
-                    <p className="font-mono text-xs bg-blue-100 p-3 rounded">
-                        Hash = SHA256(prompt_text + timestamp + user_email)
-                    </p>
-                    <p className="mt-3">
-                        You can verify any log entry by recomputing its hash and comparing it to the stored signature in the database.
-                    </p>
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
         </div>
